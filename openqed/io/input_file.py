@@ -21,6 +21,9 @@ from .parser import Parser
 class UserInput(TypedDict):
     """This class defines all possible parameters that can appear in the input file."""
     spacing: float | np.float64
+    # MPI parameters
+    w_cavity_parallel: int
+    w_probe_parallel: int
 
 class InputFile(Parser):
     """
@@ -50,4 +53,9 @@ class InputFile(Parser):
 
     def _convert_to_typed_dict(self, data: dict[str, Any]) -> UserInput:
         """Convert the dictionary to a TypedDict."""
-        return UserInput(spacing=float(data.get("spacing", 0.0)))
+        return UserInput(
+            spacing=float(data.get("spacing", 0.0)),
+            # MPI parameters
+            w_cavity_parallel=int(data.get("w_cavity_parallel", 1)),
+            w_probe_parallel=int(data.get("w_probe_parallel", 1))
+        )
