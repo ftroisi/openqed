@@ -17,7 +17,7 @@
 import os
 import numpy as np
 
-class InputFile():
+class GenericInput():
     """"""
     def __init__(self, file_name: str | None = None) -> None:
         if file_name is None:

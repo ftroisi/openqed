@@ -13,23 +13,21 @@
 # limitations under the License.
 
 """
-Input/Output module for OpenQED.
+OpenQED module.
 
-.. currentmodule:: openqed.io
+.. currentmodule:: openqed
 
-Classes and utilities to handle the Input/Output in OpenQED.
+Classes and utilities to use OpenQED.
 
 .. autosummary::
-    :toctree: generated/
 
-    Parser
-    Dumper
-    InputFile
-    GenericInput
+Submodules
+----------
+io
+    Input/Output module for OpenQED.
+mpi
+    MPI module for OpenQED.
+
 """
 
-from .parser import Parser, Dumper
-from .input_file import InputFile
-from .generic_input import GenericInput
-
-__all__: list[str] = ["Parser", "Dumper", "InputFile", "GenericInput"]
+__all__: list[str] = []

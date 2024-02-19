@@ -16,6 +16,7 @@
 
 import os
 import json
+from typing import Any
 from yaml import load, dump
 # Use CLoader and CDumper for faster parsing. If not available, use the default ones. Those
 # are available if libyaml is installed (see official PyYAML documentation for more information)
@@ -38,20 +39,24 @@ class Parser():
         self.file_name: str = file_name
 
     @classmethod
-    def read_yaml(cls, file_name: str) -> dict[str, str]:
+    def read_yaml(cls, file_name: str) -> dict[str, Any]:
         """Read a yaml file and return a dictionary with the parameters."""
+        data: dict[str, Any] = {}
         with open(file_name, 'r', encoding="UTF-8") as f:
-            data: dict[str, str] = load(f, Loader=YAMLLoader)
+            data: dict[str, Any] = load(f, Loader=YAMLLoader)
             f.close()
-        return data
+        # Convert the keys to lowercase
+        return {key.lower(): value for key, value in data.items()}
 
     @classmethod
-    def read_json(cls, file_name: str) -> dict[str, str]:
+    def read_json(cls, file_name: str) -> dict[str, Any]:
         """Read a json file and return a dictionary with the parameters."""
+        data: dict[str, Any] = {}
         with open(file_name, 'r', encoding="UTF-8") as f:
-            data: dict[str, str] = json.load(f)
+            data: dict[str, Any] = json.load(f)
             f.close()
-        return data
+        # Convert the keys to lowercase
+        return {key.lower(): value for key, value in data.items()}
 
 class Dumper():
     """This class handles the dumping of some data to a JSON or YAML file
