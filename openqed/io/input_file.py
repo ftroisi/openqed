@@ -20,7 +20,9 @@ from .parser import Parser
 
 class UserInput(TypedDict):
     """This class defines all possible parameters that can appear in the input file."""
-    spacing: float | np.float64
+    grid_spacing: dict[str, np.float64]
+    grid_boundaries: dict[str, tuple[np.float64, np.float64]]
+    grid_type: str
     # MPI parameters
     w_cavity_parallel: int
     w_probe_parallel: int
@@ -54,7 +56,9 @@ class InputFile(Parser):
     def _convert_to_typed_dict(self, data: dict[str, Any]) -> UserInput:
         """Convert the dictionary to a TypedDict."""
         return UserInput(
-            spacing=float(data.get("spacing", 0.0)),
+            grid_spacing=data.get("spacing", {}),
+            grid_boundaries=data.get("boundaries", {}),
+            grid_type=data.get("type", "real_space"),
             # MPI parameters
             w_cavity_parallel=int(data.get("w_cavity_parallel", 1)),
             w_probe_parallel=int(data.get("w_probe_parallel", 1))
