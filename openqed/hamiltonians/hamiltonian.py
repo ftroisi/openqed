@@ -15,6 +15,7 @@
 """This module contains the base abstract Hamiltonain class"""
 
 from abc import ABC, abstractmethod
+from openqed.grid.grid import Grid
 
 class Hamiltonian(ABC):
     """This class is the base abstract Hamiltonain class. All modules in the `hamiltonians` folder
@@ -24,7 +25,10 @@ class Hamiltonian(ABC):
         `name`: The name of the Hamiltonian.
         `terms`: a list of sctrings representing the terms of the Hamiltonian.
     """
-    def __init__(self, name: str, terms: list[str]) -> None:
+    def __init__(self,
+                name: str,
+                terms: list[str],
+                grid: Grid) -> None:
         """Initialize the Hamiltonain
 
         Args:
@@ -33,6 +37,7 @@ class Hamiltonian(ABC):
         """
         self.name: str = name
         self.terms: list[str] = terms
+        self.grid: Grid = grid
 
     @abstractmethod
     def get_hamiltonain(self):

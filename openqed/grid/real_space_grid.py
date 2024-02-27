@@ -46,8 +46,8 @@ class RealSpaceGrid(Grid):
     """
     def __init__(self,
                 input_file: InputFile,
-                boundaries: dict[str, tuple[float, float] | tuple[np.float64, np.float64]],
-                spacing: dict[str, float | np.float64]):
+                boundaries: dict[str, tuple[np.float64, np.float64]] | None = None,
+                spacing: dict[str, np.float64] | None = None):
         # First, initialize the base Grid class
         super().__init__(input_file, boundaries, spacing)
         # Define the range of the grid in each dimension

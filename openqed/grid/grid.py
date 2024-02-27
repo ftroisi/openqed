@@ -57,3 +57,8 @@ class Grid(ABC):
     def dimensions(self) -> int:
         """Get the number of dimensions of the grid"""
         return len(self.spacing.keys())
+
+    @abstractmethod
+    def flat_grid(self) -> npt.NDArray[np.float64]:
+        """Get the flat grid"""
+        raise NotImplementedError()

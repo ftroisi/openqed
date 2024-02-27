@@ -15,13 +15,16 @@
 """
 Hamiltonian terms module for OpenQED.
 
-.. currentmodule:: openqed.hamiltonians
+.. currentmodule:: openqed.terms
 
 Classes and utilities to handle the Terms that can appear in any Hamiltonian in OpenQED.
 
 .. autosummary::
     :toctree: generated/
 
-    Hamiltonian
+    Effective2DCoulombPotential
 """
 
+from .effective_2d_coulomb import Effective2DCoulombPotential
+
+__all__: list[str] = ["Effective2DCoulombPotential"]

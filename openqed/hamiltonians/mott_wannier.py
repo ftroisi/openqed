@@ -15,9 +15,9 @@
 """This model contains the Mott-Wannier Hamiltonian class"""
 
 import numpy as np
-from .hamiltonian import Hamiltonian
 from openqed.io.input_file import InputFile
 from openqed.grid.k_space_grid import KSpaceGrid
+from .hamiltonian import Hamiltonian
 
 class MottWannier(Hamiltonian):
     """
@@ -35,9 +35,7 @@ class MottWannier(Hamiltonian):
             terms: a list of sctrings representing the terms of the Hamiltonian.
         """
         # First, initialize the base Hamiltonian class
-        super().__init__("Mott-Wannier", terms)
-        # Initialize the grid
-        self.grid = KSpaceGrid(input_file)
+        super().__init__("Mott-Wannier", terms, KSpaceGrid(input_file))
 
     # def get_hamiltonian(self):
     #     """This method builds the Mott-Wannier Hamiltonian fora couple of layers.
