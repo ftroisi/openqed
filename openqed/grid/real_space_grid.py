@@ -18,7 +18,7 @@ import gc
 import numpy as np
 import numpy.typing as npt
 from openqed.io.input_file import InputFile
-from .grid import Grid
+from .grid import Grid, GridType
 
 def docstring_inherit(parent):
     def inherit(obj):
@@ -50,6 +50,7 @@ class RealSpaceGrid(Grid):
                 spacing: dict[str, np.float64] | None = None):
         # First, initialize the base Grid class
         super().__init__(input_file, boundaries, spacing)
+        self.grid_type = GridType.REAL_SPACE
         # Define the range of the grid in each dimension
         space: list[npt.NDArray] = []
         for dim in self.spacing.keys():
@@ -58,7 +59,7 @@ class RealSpaceGrid(Grid):
         # Then build a mesh, flatten it (maning that the mesh becomes a 1D
         # array) and finally stack the x-y-z-arrays
         if self.dimensions == 1:
-            self.mesh: list[npt.NDArray] = np.meshgrid(space[0], indexing='ij')
+            self.mesh: tuple[npt.NDArray[np.float64], ...] = np.meshgrid(space[0], indexing='ij')
         elif self.dimensions == 2:
             self.mesh = np.meshgrid(space[0], space[1], indexing='ij')
         elif self.dimensions == 3:

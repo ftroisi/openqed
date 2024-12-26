@@ -14,18 +14,10 @@
 
 """This module contains the analytical Effective 2D Coulomb Hamiltonian-Term class"""
 
-from typing import TypedDict
 import numpy as np
 import numpy.typing as npt
 from openqed.hamiltonians.hamiltonian import Hamiltonian
-
-class BilayerStructure(TypedDict, total=False):
-    """This class is used to define a certain property for a bilayer structure."""
-    substrate1: np.float64
-    layer1: np.float64 | npt.NDArray[np.float64]
-    interlayer: np.float64
-    layer2: np.float64 | npt.NDArray[np.float64]
-    substrate2: np.float64
+from openqed.hamiltonians.types import BilayerStructure, excitons_key_to_system_key
 
 class Effective2DCoulombPotential():
     """
@@ -50,7 +42,8 @@ class Effective2DCoulombPotential():
         self.dielectric_constants: BilayerStructure = dielectric_constants
         self.thicknesses: BilayerStructure = thicknesses
 
-    def _get_dielectric_constants(self, ref_layer: str, coupled_layer: str):
+    def _get_dielectric_constants(self, ref_layer: str, coupled_layer: str
+        ) -> tuple[np.float64, np.float64, np.float64, np.float64, np.float64]:
         """
         This method is a getter for the dielectric constants of the bilayer structure.
 
@@ -71,23 +64,20 @@ class Effective2DCoulombPotential():
         if not ref_layer in ['layer1', 'layer2'] or not coupled_layer in ['layer1', 'layer2']:
             raise ValueError(f"Argument {ref_layer} or {coupled_layer} is not valid")
         # Surrounding dielectric constants
-        eps_1 = np.float64(1.)
-        try:
-            eps_r: np.float64 = self.dielectric_constants[
-                'substrate1' if ref_layer == 'layer1' else 'substrate2']
-        except ValueError as exc:
-            raise ValueError(f"Invalid dielectric constant for {ref_layer}'s substrate") from exc
-        eps_2 = np.float64(1.)
-        try:
-            eps_2: np.float64 = self.dielectric_constants[
-                'substrate1' if coupled_layer == 'layer1' else 'substrate2']
-        except ValueError as exc:
-            raise ValueError(f"Invalid dielectric constant for {coupled_layer} substrate") from exc
-        eps_r = np.float64(1.)
-        try:
-            eps_r: np.float64 = self.dielectric_constants['interlayer']
-        except ValueError as exc:
-            raise ValueError("The dielectric constant of the interlayer is not valid") from exc
+        eps_1: np.float64 | None = self.dielectric_constants.get(
+                'substrate1' if ref_layer == 'layer1' else 'substrate2')
+        if eps_1 is None:
+            raise ValueError(f"Invalid dielectric constant for {ref_layer}'s substrate")
+
+        eps_2: np.float64 | None = self.dielectric_constants.get(
+                'substrate1' if coupled_layer == 'layer1' else 'substrate2')
+        if eps_2 is None:
+            raise ValueError(f"Invalid dielectric constant for {coupled_layer}'s substrate")
+
+        eps_r: np.float64 | None = self.dielectric_constants.get('interlayer')
+        if eps_r is None:
+            raise ValueError("The dielectric constant of the interlayer is not valid")
+
         # Layer dielectric constants
         try:
             eps_l1: np.float64 = self.dielectric_constants[ref_layer]
@@ -96,9 +86,8 @@ class Effective2DCoulombPotential():
             raise ValueError("The layers dielectric constant for are not valid") from exc
         return eps_1, eps_2, eps_r, eps_l1, eps_l2
 
-    def _get_thicknesses(self,
-                        ref_layer: str,
-                        coupled_layer: str) -> tuple[np.float64, np.float64, np.float64]:
+    def _get_thicknesses(self, ref_layer: str, coupled_layer: str
+        ) -> tuple[np.float64, np.float64, np.float64]:
         """
         This method is a getter for the thicknesses of the bilayer structure.
 
@@ -115,13 +104,18 @@ class Effective2DCoulombPotential():
             - d_1: thickness of the reference layer
             - d_2: thickness of the coupled layer
         """
-        try:
-            d_l1: np.float64 = self.thicknesses[ref_layer]
-            d_l2: np.float64 = self.thicknesses[coupled_layer]
-            d_inter: np.float64 = self.thicknesses['interlayer']
-            return d_l1, d_l2, d_inter
-        except ValueError as exc:
-            raise ValueError("The thicknesses are not valid") from exc
+        t_l1: np.float64 | None = self.thicknesses.get(ref_layer)
+        if t_l1 is None:
+            raise ValueError(f"The thickness for {ref_layer}'s substrate")
+
+        t_l2: np.float64 | None = self.thicknesses.get(coupled_layer)
+        if t_l2 is None:
+            raise ValueError(f"The thickness for {coupled_layer}'s substrate")
+
+        t_inter: np.float64 | None = self.thicknesses.get('interlayer')
+        if t_inter is None:
+            raise ValueError("The thickness of the interlayer is not valid")
+        return t_l1, t_l2, t_inter
 
     def _get_f_k(self,
                 ref_layer: str,
@@ -149,7 +143,9 @@ class Effective2DCoulombPotential():
             self._get_thicknesses(ref_layer=ref_layer, coupled_layer=coupled_layer)
         th_kr: npt.NDArray[np.float64] = np.tanh(k_grid * d_inter)
         # Then compute the various terms of f_k
-        f_k: npt.NDArray[np.float64] = (eps_1 + eps_2) + (eps_12 / eps_r + eps_r) * th_kr
+        f_k: npt.NDArray[np.float64] = \
+            ((eps_1 + eps_2) * np.ones_like(th_kr, dtype=np.float64)).astype(np.float64)
+        f_k += (eps_12 / eps_r + eps_r) * th_kr
         f_k += ((eps_l1 + eps_12 / eps_l1) + (eps_l1 * eps_2 / eps_r +
                eps_1 * eps_r / eps_l1) * th_kr) * np.tanh(k_grid * d_l1)
         f_k += ((eps_l2 + eps_12 / eps_l2) + (eps_l2 * eps_1 / eps_r +
@@ -159,10 +155,11 @@ class Effective2DCoulombPotential():
                np.tanh(k_grid * d_l1) * np.tanh(k_grid * d_l2))
         return f_k
 
-    def get_intralayer_dielectric_function(self,
-                                            ref_layer: str,
-                                            coupled_layer: str,
-                                            k_grid: npt.NDArray[np.float64]):
+    def _get_intralayer_dielectric_function(
+            self,
+            ref_layer: str,
+            coupled_layer: str,
+            k_grid: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """This method computes `epsilon_ll`, the dielectric function for intralyer excitons.
         It is equation 3 of the paper in the class docstring.
 
@@ -187,15 +184,16 @@ class Effective2DCoulombPotential():
         f_k = self._get_f_k(ref_layer=ref_layer, coupled_layer=coupled_layer, k_grid=k_grid)
         # Compute the various terms of the dielectric function
         denom = (np.cosh(k_grid * d_l1 / 2)**2 * (1 + (eps_1/eps_l1) * np.tanh(k_grid * d_l1 / 2)))
-        f_k_denom: npt.NDArray[np.float64] = 1 + (eps_2 / eps_r) * th_kr
+        f_k_denom: npt.NDArray[np.float64] = np.ones_like(th_kr, dtype=np.float64)
+        f_k_denom += (eps_2 / eps_r) * th_kr
         f_k_denom += (eps_2/eps_l2 + eps_l2/eps_r * th_kr) * np.tanh(k_grid * d_l2)
         f_k_denom += (eps_2/eps_l1 + eps_r/eps_l1 * th_kr) * np.tanh(k_grid * d_l1 / 2)
         f_k_denom += ((eps_l2/eps_l1 + eps_2*eps_r / eps_l12 * th_kr) *
             np.tanh(k_grid * d_l2) * np.tanh(k_grid * d_l1 / 2))
         # Combine the terms to get the dielectric function
-        return (np.cosh(k_grid * d_l1) / denom) * (f_k / f_k_denom)
+        return ((np.cosh(k_grid * d_l1) / denom) * (f_k / f_k_denom)).astype(np.float64)
 
-    def get_interlayer_dielectric_function(self,
+    def _get_interlayer_dielectric_function(self,
                                         ref_layer: str,
                                         coupled_layer: str,
                                         k_grid: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
@@ -226,9 +224,10 @@ class Effective2DCoulombPotential():
         denom *= (1 + eps_1/eps_l1 * np.tanh(k_grid * d_l1 / 2))
         denom *= (1 + eps_2/eps_l2 * np.tanh(k_grid * d_l2 / 2))
         # Note that eps will be an array with the dimensions of the k grid
-        return cosh_kr * f_k * ((np.cosh(k_grid * d_l1) * np.cosh(k_grid * d_l2)) / denom)
+        return (cosh_kr * f_k * ((np.cosh(k_grid * d_l1) * np.cosh(k_grid * d_l2)) / denom)
+                ).astype(np.float64)
 
-    def get_w_q_analytical(self, k_gr: npt.NDArray[np.float64], layer: str):
+    def get_w_q_analytical(self, exciton: str) -> npt.NDArray[np.float64]:
         """
         This function computes the analytical effective 2D Coulomb potential.
         It is equation 2 of the paper in the class docstring.
@@ -245,26 +244,27 @@ class Effective2DCoulombPotential():
         k_grid = self.generate_coulomb_kernel()
         # First, define the two layers. Since the layer argument contains one of the keys of
         # the Excitons class, we need to convert it to the key of the SystemStructure class
-        ref_layer = excitons_key_to_system_key(layer.split("_")[0])
-        coupled_layer = excitons_key_to_system_key(layer.split("_")[1])
+        ref_layer = excitons_key_to_system_key(exciton.split("_")[0])
+        coupled_layer = excitons_key_to_system_key(exciton.split("_")[1])
         # Compute the in-plane momentum (k parallel)
         eps = 1.
         # Compute the dielectric function.
         if ref_layer == coupled_layer:
             # Intra-layer casex
-            eps = self.get_intralayer_dielectric_function(
+            eps = self._get_intralayer_dielectric_function(
                 ref_layer=ref_layer, coupled_layer='layer1' if ref_layer == 'layer2' else 'layer2',
                 k_grid=k_grid)
         else:
             # Inter-layer case
-            eps = self.get_interlayer_dielectric_function(ref_layer=ref_layer,
+            eps = self._get_interlayer_dielectric_function(ref_layer=ref_layer,
                                                         coupled_layer=coupled_layer, k_grid=k_grid)
-        # Element-wise multiplication. The 4pi factor come from the conversion
-        # of the vacuum permittivity eps_0 in atomic units
-        q_c = np.float64(np.linalg.norm(self.flat_k_grid[1] - self.flat_k_grid[0]))
+        # The main diagonal of the Coulomb kernel would be 0, so we need to add a small value
+        q_c = np.float64(np.linalg.norm(
+            self.hamiltonian.grid.flat_grid()[1] - self.hamiltonian.grid.flat_grid()[0]))
         np.fill_diagonal(k_grid, q_c / 4.)
+        # The 4pi factor comes from the conversion of the vacuum permittivity eps_0 in atomic units
         w_q = (q_c / (2*np.pi))**2 * np.divide(4 * np.pi, (np.multiply(k_grid, eps)))
-        return w_q
+        return w_q.astype(np.float64)
 
     def generate_coulomb_kernel(self) -> npt.NDArray[np.float64]:
         """

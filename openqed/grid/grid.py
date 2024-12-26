@@ -34,7 +34,7 @@ class Grid(ABC):
         `spacing`: The spacing of the grid.
     """
     def __init__(self,
-                input_file: InputFile,
+                input_file: InputFile | None = None,
                 boundaries: dict[str, tuple[np.float64, np.float64]] | None = None,
                 spacing: dict[str, np.float64] | None = None) -> None:
         """Initialize the Grid
@@ -48,10 +48,21 @@ class Grid(ABC):
         Raises:
             ValueError: If the keys of the `boundaries` and `spacing` dictionaries are not the same.
         """
-        self.grid_type: GridType = GridType(input_file.input["grid_type"])
-        self.spacing: dict[str, np.float64] = input_file.input["grid_spacing"]
-        self.boundaries: dict[str, tuple[np.float64, np.float64]] = \
-            input_file.input["grid_boundaries"]
+        if input_file is None:
+            if boundaries is None or spacing is None:
+                raise ValueError(
+                    "If `input_file` is not provided, both `boundaries` and `spacing` must be.")
+            self.spacing: dict[str, np.float64] = spacing
+            self.boundaries: dict[str, tuple[np.float64, np.float64]] = boundaries
+        else:
+            self.spacing: dict[str, np.float64] = input_file.input["grid_spacing"]
+            self.boundaries: dict[str, tuple[np.float64, np.float64]] = \
+                input_file.input["grid_boundaries"]
+        # Ensure that the keys of the `boundaries` and `spacing` dictionaries are the same
+        if len(self.spacing.keys()) != len(self.boundaries.keys()):
+            raise ValueError(
+                "The keys of the `boundaries` and `spacing` dictionaries must be the same." +
+                f"Spacing: {self.spacing.keys()}; Boundaries {self.boundaries.keys()}")
 
     @property
     def dimensions(self) -> int:

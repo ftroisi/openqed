@@ -18,7 +18,7 @@ import gc
 import numpy as np
 import numpy.typing as npt
 from openqed.io.input_file import InputFile
-from .grid import Grid
+from .grid import Grid, GridType
 
 def docstring_inherit(parent):
     def inherit(obj):
@@ -36,7 +36,7 @@ def docstring_inherit(parent):
 class KSpaceGrid(Grid):
     """
     This class is the k space (or reciprocal space) grid class. It inherits from the base Grid class
-    
+
     Attributes:
         mesh: The mesh of the grid, as returned from `numpy.meshgrid`. It is a list of 1D, 2D or 3D
             arrays, depending on the dimensionality of the grid.
@@ -50,15 +50,16 @@ class KSpaceGrid(Grid):
                 spacing: dict[str, np.float64] | None = None):
         # First, initialize the base Grid class
         super().__init__(input_file, boundaries, spacing)
+        self.grid_type = GridType.K_SPACE
         # Define the range of the grid in each dimension
         space: list[npt.NDArray] = []
         for dim in self.spacing.keys():
             start, end = self.boundaries[dim]
             space.append(np.arange(start, end, self.spacing[dim]))
-        # Then build a mesh, flatten it (maning that the mesh becomes a 1D
+        # Then build a mesh, flatten it (meaning that the mesh becomes a 1D
         # array) and finally stack the x-y-z-arrays
         if self.dimensions == 1:
-            self.mesh: list[npt.NDArray] = np.meshgrid(space[0], indexing='ij')
+            self.mesh: tuple[npt.NDArray[np.float64], ...] = np.meshgrid(space[0], indexing='ij')
         elif self.dimensions == 2:
             self.mesh = np.meshgrid(space[0], space[1], indexing='ij')
         elif self.dimensions == 3:
@@ -105,18 +106,34 @@ class KSpaceGrid(Grid):
             self._flat_grid = flat_gr
         return flat_gr
 
-    def project_to_unit_cell(self, real_lattice: npt.NDArray[np.float64]):
-        """This method projects the grid to the unit cell"""
+    def project_to_unit_cell(self,
+                            real_lattice: npt.NDArray[np.float64],
+                            b: np.float64,
+                            cache_result: bool = False) -> npt.NDArray[np.float64]:
+        """This method projects the grid to the unit cell
+
+        Args:
+            real_lattice: the real lattice of the material. This should be given in atomic units
+            b: lattice constant in the reciprocal lattice. This should be given in atomic units
+            cache_result: If True, the flate grid will be stored in memory. This will overwrite the
+                previous grid if it was already computed
+        """
         if self.dimensions != 2:
             raise NotImplementedError("This method is only available for 2D grids")
-        return np.dot(self.flat_grid(), get_k_space_hexagonal_cell(real_lattice=real_lattice))
+        flat_gr: npt.NDArray[np.float64] = \
+            np.dot(self.flat_grid(), get_k_space_hexagonal_cell(real_lattice=real_lattice, b=b))
+        if cache_result:
+            self._flat_grid = flat_gr
+        return flat_gr
 
-def get_k_space_hexagonal_cell(real_lattice: npt.NDArray[np.float64] | None = None,
-                                b: np.float64 | None = None) -> npt.NDArray[np.float64]:
+def get_k_space_hexagonal_cell(
+        real_lattice: npt.NDArray[np.float64] | None = None,
+        b: np.float64 | None = None) -> npt.NDArray[np.float64]:
     """This method computes the hexagonal cell in k space of a 2D material.
 
     Args:
-        a: lattice constant in the reciprocal lattice. This should be given in atomic units
+        real_lattice: the real lattice of the material. This should be given in atomic units
+        b: lattice constant in the reciprocal lattice. This should be given in atomic units
     """
     if real_lattice is not None:
         return np.array(2. * np.pi * np.linalg.inv(real_lattice).T, dtype=np.float64)
