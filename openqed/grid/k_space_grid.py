@@ -45,7 +45,8 @@ class KSpaceGrid(Grid):
             DIRECTLY, but call the `flat_grid` method instead.
     """
     def __init__(self,
-                input_file: InputFile,
+                 *,
+                input_file: InputFile | None = None,
                 boundaries: dict[str, tuple[np.float64, np.float64]] | None = None,
                 spacing: dict[str, np.float64] | None = None):
         # First, initialize the base Grid class

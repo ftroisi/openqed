@@ -42,3 +42,11 @@ def excitons_key_to_system_key(key: str) -> str:
     if key == "l2":
         return "layer2"
     raise ValueError("The key is not valid")
+
+def structure_key_to_exciton_key(key: str) -> str:
+    """This method converts the key of the excitons to the key of the system"""
+    if key == "layer1":
+        return "l1"
+    if key == "layer2":
+        return "l2"
+    raise ValueError("The key is not valid")
