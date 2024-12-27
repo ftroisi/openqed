@@ -15,6 +15,8 @@
 """This module contains the base abstract Hamiltonain class"""
 
 from abc import ABC, abstractmethod
+import numpy as np
+import numpy.typing as npt
 from openqed.grid.grid import Grid
 
 class Hamiltonian(ABC):
@@ -47,6 +49,9 @@ class Hamiltonian(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def diagonalize_hamiltonian(self):
+    def diagonalize_hamiltonian(self,
+                                hamiltonian: npt.NDArray[np.float64] | npt.NDArray[np.complex128],
+                                **kwargs
+        ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64] | npt.NDArray[np.complex128]]:
         """Diagonalize the Hamiltonian"""
         raise NotImplementedError()
