@@ -25,6 +25,11 @@ Classes and utilities to handle the Terms that can appear in any Hamiltonian in 
     Effective2DCoulombPotential
 """
 
+from .hamiltonian_term import HamiltonianTerm
 from .effective_2d_coulomb import Effective2DCoulombPotential
+from .free_exciton import FreeExciton
 
-__all__: list[str] = ["Effective2DCoulombPotential"]
+__all__: list[str] = [
+    "HamiltonianTerm",
+    "Effective2DCoulombPotential",
+    "FreeExciton"]

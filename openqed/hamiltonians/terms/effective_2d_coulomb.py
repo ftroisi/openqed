@@ -16,10 +16,11 @@
 
 import numpy as np
 import numpy.typing as npt
+from openqed.hamiltonians.terms import HamiltonianTerm
 from openqed.hamiltonians.hamiltonian import Hamiltonian
 from openqed.hamiltonians.types import BilayerStructure, excitons_key_to_system_key
 
-class Effective2DCoulombPotential():
+class Effective2DCoulombPotential(HamiltonianTerm):
     """
     This class defines the analytical effective 2D Coulomb potential Hamiltonian term.\\
     It implements the formulas of the Supplementary Note 1 of the Supporting Info of the paper:
@@ -37,7 +38,7 @@ class Effective2DCoulombPotential():
                 *,
                 thicknesses: BilayerStructure,
                 dielectric_constants: BilayerStructure):
-        self.hamiltonian: Hamiltonian = hamiltonian
+        super().__init__(hamiltonian)
         # Now set the properties of the bilayer structure
         self.dielectric_constants: BilayerStructure = dielectric_constants
         self.thicknesses: BilayerStructure = thicknesses
@@ -227,19 +228,23 @@ class Effective2DCoulombPotential():
         return (cosh_kr * f_k * ((np.cosh(k_grid * d_l1) * np.cosh(k_grid * d_l2)) / denom)
                 ).astype(np.float64)
 
-    def get_w_q_analytical(self, exciton: str) -> npt.NDArray[np.float64]:
+    def get_hamiltonian_term(self, **kwargs) -> npt.NDArray[np.float64]:
         """
         This function computes the analytical effective 2D Coulomb potential.
         It is equation 2 of the paper in the class docstring.
 
         Args:
-            k_vector (real, array): grid in k space
-            layer_one, layer_two (int, scalar): index of the layer
+            exciton: the exciton for which the analytical screened potential is computed. It is
+                a string with the format `li_lj`, where `i` and `j` are numbers and the whole string
+                is a key of `:class:BilayerExcitons`. For instance, specifying `l1_l1` will compute
+                the analytical screened potential for the intraleyer excitons of the first layer
 
         Returns:
-            W_q (array, real): w_q is an array of the dimension of the k grid
-                containing the analytical screened potential
+            An array of the dimension of the k grid containing the analytical screened potential
         """
+        exciton: str = kwargs.get('exciton', None)
+        if exciton is None:
+            raise ValueError("The exciton argument is missing")
         # Generate coulomb kernel
         k_grid = self.generate_coulomb_kernel()
         # First, define the two layers. Since the layer argument contains one of the keys of
@@ -250,14 +255,14 @@ class Effective2DCoulombPotential():
         eps = 1.
         # Compute the dielectric function.
         if ref_layer == coupled_layer:
-            # Intra-layer casex
+            # Intra-layer case
             eps = self._get_intralayer_dielectric_function(
                 ref_layer=ref_layer, coupled_layer='layer1' if ref_layer == 'layer2' else 'layer2',
                 k_grid=k_grid)
         else:
             # Inter-layer case
-            eps = self._get_interlayer_dielectric_function(ref_layer=ref_layer,
-                                                        coupled_layer=coupled_layer, k_grid=k_grid)
+            eps = self._get_interlayer_dielectric_function(
+                ref_layer=ref_layer, coupled_layer=coupled_layer, k_grid=k_grid)
         # The main diagonal of the Coulomb kernel would be 0, so we need to add a small value
         q_c = np.float64(np.linalg.norm(
             self.hamiltonian.grid.flat_grid()[1] - self.hamiltonian.grid.flat_grid()[0]))
