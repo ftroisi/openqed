@@ -49,7 +49,7 @@ class FreeExciton(HamiltonianTerm):
                 l2 = structure_key_to_exciton_key(hole_key)
                 key = f"{l1}_{l2}"
                 self.exciton_effective_mass[key] = \
-                    (1 / electron_effective_mass[l1] + 1 / hole_effective_mass[l2])**(-1)
+                    (1/electron_effective_mass[elec_key] + 1/hole_effective_mass[hole_key])**(-1)
 
     def get_hamiltonian_term(self, **kwargs) -> npt.NDArray[np.float64]:
         """

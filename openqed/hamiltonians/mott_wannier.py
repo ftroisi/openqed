@@ -66,29 +66,29 @@ class MottWannier(Hamiltonian):
                 self.term_to_instance[term] = Effective2DCoulombPotential(
                     self, thicknesses=thicknesses, dielectric_constants=dielectric_constants)
 
-    def get_hamiltonian(self, layer: str) -> npt.NDArray[np.float64]:
+    def get_hamiltonian(self, **kwargs) -> npt.NDArray[np.float64]:
         """This method builds the Mott-Wannier Hamiltonian for a couple of layers.
         See equation (13) of the supplementary information of
         https://pubs.acs.org/doi/10.1021/acs.nanolett.0c03019?fig=fig4&ref=pdf
 
         Args:
-            layer (str): the layer for which the Hamiltonian is computed. Its value can be
-                any key of the Excitons class
+            exciton (str): the exciton for which the Hamiltonian is computed. Its value can be
+                any key of the BilayerExcitons class
 
         Returns:
-            h_ll: a matrix, corresponding to the Hamiltonians that describe the exciton
-                wavefunction for the chosen layers
+            The Hamiltonians that describe the exciton wavefunction for the chosen exciton
         """
+        exciton: str = kwargs.get('exciton', None)
         # First compute mesh size
-        mesh_size = np.size(self.grid.flat_grid(), 1)
+        mesh_size = np.size(self.grid.flat_grid(), 0)
         hamiltonian: npt.NDArray[np.float64] = np.zeros((mesh_size, mesh_size), dtype=np.float64)
         # Then, get the different terms
         for term in self.terms:
             if term == "free_exciton":
                 hamiltonian += np.diag(
-                    self.term_to_instance[term].get_hamiltonian_term(layer=layer))
+                    self.term_to_instance[term].get_hamiltonian_term(exciton=exciton))
             elif term == "effective_2d_coulomb":
-                hamiltonian += self.term_to_instance[term].get_hamiltonian_term(layer=layer)
+                hamiltonian += self.term_to_instance[term].get_hamiltonian_term(exciton=exciton)
         return hamiltonian
 
     def diagonalize_hamiltonian(self,
