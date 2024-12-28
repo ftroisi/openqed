@@ -28,10 +28,6 @@ from openqed.hamiltonians.types import BilayerStructure
 class MottWannier(Hamiltonian):
     """
     This class is the Mott-Wannier Hamiltonian class. It inherits from the base Hamiltonian class.
-
-    Attributes:
-        `name`: The name of the Hamiltonian.
-        `terms`: a list of strings representing the terms of the Hamiltonian.
     """
     def __init__(self,
                 terms: list[str],
@@ -47,6 +43,12 @@ class MottWannier(Hamiltonian):
         Args:
             name: The name of the Hamiltonian.
             terms: a list of strings representing the terms of the Hamiltonian.
+            grid: The grid object to use. Note that the Mott-Wannier Hamiltonian will be represented
+                on this grid. TODO: Add RealSpaceGrid support
+            electron_effective_mass: The effective mass of the electrons in the bilayer structure.
+            hole_effective_mass: The effective mass of the holes in the bilayer structure.
+            thicknesses: The thicknesses of the layers in the bilayer structure.
+            dielectric_constants: The dielectric constants of the layers in the bilayer structure.
         """
         # First, initialize the base Hamiltonian class
         super().__init__("Mott-Wannier", terms, grid=grid)

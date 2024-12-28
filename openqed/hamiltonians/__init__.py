@@ -26,5 +26,9 @@ Classes and utilities to handle the Hamiltonians in OpenQED.
 """
 
 from .hamiltonian import Hamiltonian
+from .mott_wannier import MottWannier
 
-__all__: list[str] = ["Hamiltonian"]
+__all__: list[str] = [
+    "Hamiltonian",
+    "MottWannier"
+]

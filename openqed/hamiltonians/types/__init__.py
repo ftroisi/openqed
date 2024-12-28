@@ -24,9 +24,16 @@ Classes and types to handle the Terms that can appear in any Hamiltonian in Open
 
     BilayerStructure
     BilayerExcitons
-    excitons_key_to_system_key
+    excitons_key_to_structure_key
+    structure_key_to_exciton_key
 """
 
-from .bilayer_excitons import BilayerStructure, BilayerExcitons, excitons_key_to_system_key
+from .bilayer_excitons import (BilayerStructure,
+                               BilayerExcitons,
+                               excitons_key_to_structure_key,
+                               structure_key_to_exciton_key)
 
-__all__: list[str] = ["BilayerStructure", "BilayerExcitons", "excitons_key_to_system_key"]
+__all__: list[str] = ["BilayerStructure",
+                      "BilayerExcitons",
+                      "excitons_key_to_structure_key",
+                      "structure_key_to_exciton_key"]

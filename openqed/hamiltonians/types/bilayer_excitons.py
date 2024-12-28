@@ -35,7 +35,7 @@ class BilayerExcitons(TypedDict, total=False):
     l2_l1: np.float64 | npt.NDArray[np.float64] | np.complex128
     l2_l2: np.float64 | npt.NDArray[np.float64] | np.complex128
 
-def excitons_key_to_system_key(key: str) -> str:
+def excitons_key_to_structure_key(key: str) -> str:
     """This method converts the key of the excitons to the key of the system"""
     if key == "l1":
         return "layer1"

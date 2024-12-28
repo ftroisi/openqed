@@ -23,6 +23,10 @@ Classes and utilities to use OpenQED.
 
 Submodules
 ----------
+grid
+    Grid module for OpenQED.
+hamiltonians
+    Hamiltonians module for OpenQED. Containt a collection of Hamiltonian that can be solved.
 io
     Input/Output module for OpenQED.
 mpi

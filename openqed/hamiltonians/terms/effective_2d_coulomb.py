@@ -18,7 +18,7 @@ import numpy as np
 import numpy.typing as npt
 from openqed.hamiltonians.terms import HamiltonianTerm
 from openqed.hamiltonians.hamiltonian import Hamiltonian
-from openqed.hamiltonians.types import BilayerStructure, excitons_key_to_system_key
+from openqed.hamiltonians.types import BilayerStructure, excitons_key_to_structure_key
 
 class Effective2DCoulombPotential(HamiltonianTerm):
     """
@@ -37,7 +37,14 @@ class Effective2DCoulombPotential(HamiltonianTerm):
                 hamiltonian: Hamiltonian,
                 *,
                 thicknesses: BilayerStructure,
-                dielectric_constants: BilayerStructure):
+                dielectric_constants: BilayerStructure) -> None:
+        """Initialize the Effective2DCoulombPotential class
+
+        Args:
+            hamiltonian: The Hamiltonian object to which the term belongs
+            thicknesses: The thicknesses of the layers in the bilayer structure.
+            dielectric_constants: The dielectric constants of the layers in the bilayer structure.
+        """
         super().__init__(hamiltonian)
         # Now set the properties of the bilayer structure
         self.dielectric_constants: BilayerStructure = dielectric_constants
@@ -249,8 +256,8 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         k_grid = self.generate_coulomb_kernel()
         # First, define the two layers. Since the layer argument contains one of the keys of
         # the Excitons class, we need to convert it to the key of the SystemStructure class
-        ref_layer = excitons_key_to_system_key(exciton.split("_")[0])
-        coupled_layer = excitons_key_to_system_key(exciton.split("_")[1])
+        ref_layer = excitons_key_to_structure_key(exciton.split("_")[0])
+        coupled_layer = excitons_key_to_structure_key(exciton.split("_")[1])
         # Compute the in-plane momentum (k parallel)
         eps = 1.
         # Compute the dielectric function.

@@ -124,10 +124,6 @@ class KSpaceGrid(Grid):
         """
         if self.dimensions != 2:
             raise NotImplementedError("This method is only available for 2D grids")
-        print(get_k_space_hexagonal_cell(
-                real_space_lattice_parameter=real_space_lattice_parameter,
-                k_space_lattice_parameter=k_space_lattice_parameter
-            ))
         flat_gr: npt.NDArray[np.float64] = np.dot(
             self.flat_grid(),
             get_k_space_hexagonal_cell(
