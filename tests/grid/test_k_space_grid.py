@@ -102,27 +102,53 @@ class TestKSpaceGrid(unittest.TestCase):
         index = np.where(np.linalg.norm(flat_grid - point, axis=1) < 0.001 / 2)[0]
         self.assertEqual(len(index), 1)
 
-    # 4. Test the project_to_unit_cell method
+    # 4. Test get the index of a point in the grid
+
+    def test_get_index_1d(self):
+        """ Test the get_index method for the 1D grid """
+        point = np.array([0.01])
+        index = self.grid_1d.get_point_index(point)
+        self.assertEqual(index, 10)
+        # Test the case where the point has the wrong number of dimensions
+        with self.assertRaises(ValueError):
+            self.grid_1d.get_point_index(np.array([0.01, 0.02]))
+
+    def test_get_index_2d(self):
+        """ Test the get_index method for the 2D grid """
+        # Point 1: origin
+        point = np.array([0.0, 0.0])
+        index = self.grid_2d.get_point_index(point)
+        self.assertEqual(index, 820)
+        # Point 2, last of the grid, defined as tuple
+        point = (0.019, 0.019)
+        index = self.grid_2d.get_point_index(point)
+        self.assertEqual(index, 1599)
+        # Test the case where the point has the wrong number of dimensions
+        with self.assertRaises(ValueError):
+            self.grid_2d.get_point_index(np.array([0.01]))
+
+    # 5. Test the project_to_unit_cell method
+
     def test_project_to_unit_cell(self):
         """ Test the project_to_unit_cell method """
-        flat_grid = self.grid_2d.flat_grid(cache_result=True)
+        self.grid_2d.flat_grid(cache_result=True)
         # Find one point in the grid
         point = np.array([0.01, 0.015])
-        index_before_proj = np.where(np.linalg.norm(flat_grid - point, axis=1) < 0.001 / 2)[0]
-        self.assertEqual(len(index_before_proj), 1)
-        # Check that the method does not raise any error
-        projected_grid = self.grid_2d.project_to_unit_cell(
-            real_space_lattice_parameter=np.float64(3.32) / Bohr)
-        # Check that the point is was projected to the unit cell only in the new grid
-        index_after_proj = np.where(np.linalg.norm(flat_grid - point, axis=1) < 0.001 / 2)[0]
-        self.assertEqual(len(index_after_proj), 1)
-        index_after_proj = np.where(np.linalg.norm(projected_grid - point, axis=1) < 0.001 / 2)[0]
-        self.assertNotEqual(index_after_proj[0], index_before_proj[0])
+        index_before_proj = self.grid_2d.get_point_index(point)
+        # Check that the projection method does not raise any error
+        self.grid_2d.project_to_unit_cell(real_space_lattice_parameter=np.float64(3.32) / Bohr)
+        # Check that the point was projected to the unit cell only in the new grid
+        index_after_proj = self.grid_2d.get_point_index(point)
+        self.assertEqual(index_after_proj, index_before_proj)
+        # Now cache the projected grid
+        self.grid_2d.project_to_unit_cell(
+            real_space_lattice_parameter=np.float64(3.32) / Bohr, cache_result=True)
+        index_after_proj = self.grid_2d.get_point_index(point)
+        self.assertNotEqual(index_after_proj, index_before_proj)
         # Finally, check that the new value of the reference point is correct
         projected_point = np.array([0.01001481, 0.01156411])
-        index_after_proj = np.where(
-            np.linalg.norm(projected_grid - projected_point, axis=1) < 0.001 / 2)[0]
-        self.assertEqual(index_after_proj[0], index_before_proj[0])
+        index_after_proj = self.grid_2d.get_point_index(projected_point)
+        self.assertEqual(index_after_proj, index_before_proj)
 
 
 if __name__ == "__main__":

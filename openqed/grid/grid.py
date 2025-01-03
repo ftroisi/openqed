@@ -73,3 +73,24 @@ class Grid(ABC):
     def flat_grid(self) -> npt.NDArray[np.float64]:
         """Get the flat grid"""
         raise NotImplementedError()
+
+    def get_point_index(self,
+                        point: tuple[np.float64 | float, ...] | npt.NDArray[np.float64]) -> int:
+        """Get the index of a point in the flat grid"""
+        flat_grid = self.flat_grid()
+        # First, check that the dimensions of the point are correct
+        point = np.array(point, dtype=np.float64)
+        if point.shape[0] != self.dimensions:
+            raise ValueError("The point must have the same number of dimensions as the grid")
+        # Then, return the index of the point in the flat grid
+        index: npt.NDArray[np.int64] = np.array([])
+        spacing_keys = list(self.spacing.keys())
+        # Define a bitmap to find the point in the grid
+        grid_bitmap = np.abs(flat_grid[:, 0] - point[0]) < self.spacing[spacing_keys[0]] / 2
+        for i in range(1, self.dimensions):
+            grid_bitmap &= (np.abs(flat_grid[:, i] - point[i]) < self.spacing[spacing_keys[i]] / 2)
+        index = np.where(grid_bitmap)[0]
+        # If more than one point is found, raise an error
+        if index.shape[0] > 1:
+            raise ValueError(f"More than one point found in the grid: {index}")
+        return int(index[0])
