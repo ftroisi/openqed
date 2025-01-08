@@ -35,6 +35,12 @@ class FreeExciton(HamiltonianTerm):
 
         Args:
             hamiltonian: The Hamiltonian object to which the term belongs
+            electron_effective_mass: The effective mass of the electrons in the bilayer structure.
+                It is a dictionary where the keys are the layer names and the values are the
+                effective masses.
+            hole_effective_mass: The effective mass of the holes in the bilayer structure.
+                It is a dictionary where the keys are the layer names and the values are the
+                effective masses.
         """
         super().__init__(hamiltonian)
         self.exciton_effective_mass: BilayerExcitons = {}
