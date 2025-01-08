@@ -18,10 +18,11 @@ import unittest
 import numpy as np
 from ase.units import Bohr
 
+from tests.openqed_test import BaseOpenqedTest
 from openqed.grid.grid import GridType
 from openqed.grid.k_space_grid import KSpaceGrid
 
-class TestKSpaceGrid(unittest.TestCase):
+class TestKSpaceGrid(BaseOpenqedTest):
     """ Test class for the k space grid """
     def setUp(self) -> None:
         super().setUp()

@@ -1,4 +1,4 @@
-# Copyright 2024 Francesco Troisi
+# Copyright 2025 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,19 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" Base test class """
+""" Openqed test packages """
 
-import unittest
-from abc import ABC
-import time
+from .openqed_test import BaseOpenqedTest
 
-class BaseOpenqedTest(unittest.TestCase, ABC):
-    """ Base test class """
-    def setUp(self) -> None:
-        self._start_time = time.time()
-        self._class_location = __file__
-
-    def tearDown(self) -> None:
-        test_time = time.time() - self._start_time
-        if test_time > 2.5:
-            print(f"Test {self.id()} took {test_time} seconds", flush=True)
+__all__ = ["BaseOpenqedTest"]
