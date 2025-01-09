@@ -42,8 +42,11 @@ class Effective2DCoulombPotential(HamiltonianTerm):
 
         Args:
             hamiltonian: The Hamiltonian object to which the term belongs
-            thicknesses: The thicknesses of the layers in the bilayer structure.
+            thicknesses: The thicknesses of the layers in the bilayer structure. The user must
+                provide the thicknesses of the layers and the interlayer distance.
             dielectric_constants: The dielectric constants of the layers in the bilayer structure.
+                The user must provide the dielectric constants of the layers, the interlayer medium
+                and the surrounding medium of the layers.
         """
         super().__init__(hamiltonian)
         # Now set the properties of the bilayer structure
@@ -163,8 +166,7 @@ class Effective2DCoulombPotential(HamiltonianTerm):
                np.tanh(k_grid * d_l1) * np.tanh(k_grid * d_l2))
         return f_k
 
-    def _get_intralayer_dielectric_function(
-            self,
+    def get_intralayer_dielectric_function(self,
             ref_layer: str,
             coupled_layer: str,
             k_grid: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
@@ -201,7 +203,7 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         # Combine the terms to get the dielectric function
         return ((np.cosh(k_grid * d_l1) / denom) * (f_k / f_k_denom)).astype(np.float64)
 
-    def _get_interlayer_dielectric_function(self,
+    def get_interlayer_dielectric_function(self,
                                         ref_layer: str,
                                         coupled_layer: str,
                                         k_grid: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
@@ -263,12 +265,12 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         # Compute the dielectric function.
         if ref_layer == coupled_layer:
             # Intra-layer case
-            eps = self._get_intralayer_dielectric_function(
+            eps = self.get_intralayer_dielectric_function(
                 ref_layer=ref_layer, coupled_layer='layer1' if ref_layer == 'layer2' else 'layer2',
                 k_grid=k_grid)
         else:
             # Inter-layer case
-            eps = self._get_interlayer_dielectric_function(
+            eps = self.get_interlayer_dielectric_function(
                 ref_layer=ref_layer, coupled_layer=coupled_layer, k_grid=k_grid)
         # The main diagonal of the Coulomb kernel would be 0, so we need to add a small value
         q_c = np.float64(np.linalg.norm(
