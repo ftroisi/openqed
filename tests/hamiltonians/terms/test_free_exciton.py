@@ -32,12 +32,12 @@ class TestFreeExciton(BaseOpenqedTest):
         # First, init the Grid
         spacing = {'x': np.float64(0.001), 'y': np.float64(0.001)}
         boundaries = {
-        'x': (np.float64(-0.02), np.float64(0.02)),
-        'y': (np.float64(-0.02), np.float64(0.02))
+            'x': (np.float64(-0.02), np.float64(0.02)),
+            'y': (np.float64(-0.02), np.float64(0.02))
         }
         lattice_params: BilayerStructure = {
-        'layer1': np.float64(3.32) / Bohr,
-        'layer2': np.float64(3.319) / Bohr
+            'layer1': np.float64(3.32) / Bohr,
+            'layer2': np.float64(3.319) / Bohr
         }
         k_space_grid = KSpaceGrid(spacing=spacing, boundaries=boundaries)
         k_space_grid.project_to_unit_cell(

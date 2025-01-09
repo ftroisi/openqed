@@ -27,7 +27,7 @@ from openqed.hamiltonians.types import BilayerStructure
 class TestEffective2DCoulombPotential(BaseOpenqedTest):
     """Test class for the Effective2DCoulombPotential class
 
-    The following test are referenced against the Supplementary Note 1 of the Supporting Info
+    The following tests are referenced against the Supplementary Note 1 of the Supporting Info
     of the paper: https://doi.org/10.1038/s42005-019-0122-z
     """
     def setUp(self):
