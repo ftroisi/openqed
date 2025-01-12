@@ -12,20 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This model contains the Mott-Wannier Hamiltonian class"""
+"""This module contains the Mott-Wannier Hamiltonian class"""
 
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse.linalg as ssl
 
 from openqed.grid.k_space_grid import KSpaceGrid
-from openqed.hamiltonians.hamiltonian import Hamiltonian
+from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.terms.free_exciton import FreeExciton
 from openqed.hamiltonians.terms.effective_2d_coulomb import Effective2DCoulombPotential
 from openqed.hamiltonians.types import BilayerStructure
 
-class MottWannier(Hamiltonian):
+class MottWannierHamiltonian(MatterHamiltonian):
     """
     This class is the Mott-Wannier Hamiltonian class. It inherits from the base Hamiltonian class.
     """

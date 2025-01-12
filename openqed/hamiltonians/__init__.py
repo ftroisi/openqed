@@ -1,4 +1,4 @@
-# Copyright 2024 Francesco Troisi
+# Copyright 2025 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,12 +23,22 @@ Classes and utilities to handle the Hamiltonians in OpenQED.
     :toctree: generated/
 
     Hamiltonian
+    MatterHamiltonian
+    LightMatterHamiltonian
+    MottWannierHamiltonian
+    MoireExcitonHamiltonian
 """
 
 from .hamiltonian import Hamiltonian
-from .mott_wannier import MottWannier
+from .matter_hamiltonian import MatterHamiltonian
+from .light_matter_hamiltonian import LightMatterHamiltonian
+from .mott_wannier_hamiltonian import MottWannierHamiltonian
+from .moire_exciton_hamiltonian import MoireExcitonHamiltonian
 
 __all__: list[str] = [
     "Hamiltonian",
-    "MottWannier"
+    "MatterHamiltonian",
+    "LightMatterHamiltonian",
+    "MottWannierHamiltonian",
+    "MoireExcitonHamiltonian"
 ]
