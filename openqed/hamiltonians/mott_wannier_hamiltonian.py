@@ -14,7 +14,7 @@
 
 """This module contains the Mott-Wannier Hamiltonian class"""
 
-from typing import get_args, cast
+from typing import get_type_hints, cast
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse.linalg as ssl
@@ -90,8 +90,9 @@ class MottWannierHamiltonian(MatterHamiltonian):
 
     @exciton.setter
     def exciton(self, exciton: str) -> None:
-        if exciton not in get_args(BilayerExcitons):
-            raise ValueError("Unknown exciton type")
+        if exciton not in get_type_hints(BilayerExcitons):
+            raise ValueError(
+                f"Unknown exciton type: {exciton}. Supported types: {get_type_hints(BilayerExcitons)}")
         self._exciton = exciton
 
     def _get_effective_mass(self,

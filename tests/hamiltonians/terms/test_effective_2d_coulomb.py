@@ -58,6 +58,7 @@ class TestEffective2DCoulombPotential(BaseOpenqedTest):
         # Create the FreeExciton class
         self.coulomb_potential = Effective2DCoulombPotential(
             self.hamiltonian,
+            exciton='l1_l1',
             thicknesses=self.thicknesses,
             dielectric_constants=self.hole_effective_mass
         )

@@ -14,7 +14,7 @@
 
 """This module contains the analytical Effective 2D Coulomb Hamiltonian-Term class"""
 
-from typing import get_args
+from typing import get_type_hints
 import numpy as np
 import numpy.typing as npt
 from openqed.hamiltonians.terms import HamiltonianTerm
@@ -73,8 +73,9 @@ class Effective2DCoulombPotential(HamiltonianTerm):
 
     @exciton.setter
     def exciton(self, exciton: str) -> None:
-        if exciton not in get_args(BilayerExcitons):
-            raise ValueError("Unknown exciton type")
+        if exciton not in get_type_hints(BilayerExcitons):
+            raise ValueError(
+                f"Unknown exciton type: {exciton}. Supported types: {get_type_hints(BilayerExcitons)}")
         self._exciton = exciton
 
     def _get_dielectric_constants(self, ref_layer: str, coupled_layer: str
