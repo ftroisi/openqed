@@ -23,13 +23,14 @@ Classes and utilities to handle the Terms that can appear in any Hamiltonian in 
     :toctree: generated/
 
     Effective2DCoulombPotential
+    KineticTerm
 """
 
 from .hamiltonian_term import HamiltonianTerm
 from .effective_2d_coulomb import Effective2DCoulombPotential
-from .free_exciton import FreeExciton
+from .kinetic_term import KineticTerm
 
 __all__: list[str] = [
     "HamiltonianTerm",
     "Effective2DCoulombPotential",
-    "FreeExciton"]
+    "KineticTerm"]

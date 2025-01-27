@@ -38,8 +38,7 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
         Args:
             name: The name of the Hamiltonian.
             terms: a list of strings representing the terms of the Hamiltonian.
-            grid: The grid object to use. Note that the Moiré Exciton Hamiltonian will be represented
-                on this grid.
+            grid: The grid object to use. The Moiré Exciton Hamiltonian will be represented on this grid.
             electron_effective_mass: The effective mass of the electrons in the bilayer structure.
             hole_effective_mass: The effective mass of the holes in the bilayer structure.
             thicknesses: The thicknesses of the layers in the bilayer structure.

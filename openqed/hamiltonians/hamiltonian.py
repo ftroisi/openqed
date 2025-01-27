@@ -38,7 +38,7 @@ class Hamiltonian(ABC):
         self.grid: Grid = grid
 
     @abstractmethod
-    def get_hamiltonian(self, **kwargs) -> npt.NDArray[np.float64] | npt.NDArray[np.complex128]:
+    def get_hamiltonian(self) -> npt.NDArray[np.float64] | npt.NDArray[np.complex128]:
         """
         This method generates the Hamiltonian from the terms. It returns the Hamiltonian as a matrix
         """
