@@ -31,7 +31,7 @@ class HamiltonianTerm(ABC):
         self.hamiltonian: Hamiltonian = hamiltonian
 
     @abstractmethod
-    def get_hamiltonian_term(self, **kwargs):
+    def get_hamiltonian_term(self):
         """
         This method generates the Hamiltonian term. It returns the Hamiltonian term as a matrix
         """

@@ -14,11 +14,12 @@
 
 """This module contains the analytical Effective 2D Coulomb Hamiltonian-Term class"""
 
+from typing import get_type_hints
 import numpy as np
 import numpy.typing as npt
 from openqed.hamiltonians.terms import HamiltonianTerm
 from openqed.hamiltonians.hamiltonian import Hamiltonian
-from openqed.hamiltonians.types import BilayerStructure, excitons_key_to_structure_key
+from openqed.hamiltonians.types import (BilayerStructure, BilayerExcitons, excitons_key_to_structure_key)
 
 class Effective2DCoulombPotential(HamiltonianTerm):
     """
@@ -35,6 +36,7 @@ class Effective2DCoulombPotential(HamiltonianTerm):
     """
     def __init__(self,
                 hamiltonian: Hamiltonian,
+                exciton: str,
                 *,
                 thicknesses: BilayerStructure,
                 dielectric_constants: BilayerStructure) -> None:
@@ -42,6 +44,10 @@ class Effective2DCoulombPotential(HamiltonianTerm):
 
         Args:
             hamiltonian: The Hamiltonian object to which the term belongs
+            exciton: the exciton for which the analytical screened potential is computed. It is
+                a string with the format `li_lj`, where `i` and `j` are numbers and the whole string
+                is a key of `:class:BilayerExcitons`. For instance, specifying `l1_l1` will compute
+                the analytical screened potential for the intralayer exciton of the first layer
             thicknesses: The thicknesses of the layers in the bilayer structure. The user must
                 provide the thicknesses of the layers and the interlayer distance.
             dielectric_constants: The dielectric constants of the layers in the bilayer structure.
@@ -52,6 +58,25 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         # Now set the properties of the bilayer structure
         self.dielectric_constants: BilayerStructure = dielectric_constants
         self.thicknesses: BilayerStructure = thicknesses
+        # Set the exciton type
+        self.exciton = exciton
+
+    @property
+    def exciton(self) -> str:
+        """
+        The exciton for which the analytical screened potential is computed. It is a string with the
+        format `li_lj`, where `i` and `j` are numbers and the whole string is a key of
+        `:class:BilayerExcitons`. For instance, specifying `l1_l1` will compute the analytical screened
+        potential for the intralayer exciton of the first layer
+        """
+        return self._exciton
+
+    @exciton.setter
+    def exciton(self, exciton: str) -> None:
+        if exciton not in get_type_hints(BilayerExcitons):
+            raise ValueError(
+                f"Unknown exciton type: {exciton}. Supported types: {get_type_hints(BilayerExcitons)}")
+        self._exciton = exciton
 
     def _get_dielectric_constants(self, ref_layer: str, coupled_layer: str
         ) -> tuple[np.float64, np.float64, np.float64, np.float64, np.float64]:
@@ -237,29 +262,20 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         return (cosh_kr * f_k * ((np.cosh(k_grid * d_l1) * np.cosh(k_grid * d_l2)) / denom)
                 ).astype(np.float64)
 
-    def get_hamiltonian_term(self, **kwargs) -> npt.NDArray[np.float64]:
+    def get_hamiltonian_term(self) -> npt.NDArray[np.float64]:
         """
         This function computes the analytical effective 2D Coulomb potential.
         It is equation 2 of the paper in the class docstring.
 
-        Args:
-            exciton: the exciton for which the analytical screened potential is computed. It is
-                a string with the format `li_lj`, where `i` and `j` are numbers and the whole string
-                is a key of `:class:BilayerExcitons`. For instance, specifying `l1_l1` will compute
-                the analytical screened potential for the intraleyer excitons of the first layer
-
         Returns:
             An array of the dimension of the k grid containing the analytical screened potential
         """
-        exciton: str = kwargs.get('exciton', None)
-        if exciton is None:
-            raise ValueError("The exciton argument is missing")
         # Generate coulomb kernel
         k_grid = self.generate_coulomb_kernel()
         # First, define the two layers. Since the layer argument contains one of the keys of
         # the Excitons class, we need to convert it to the key of the SystemStructure class
-        ref_layer = excitons_key_to_structure_key(exciton.split("_")[0])
-        coupled_layer = excitons_key_to_structure_key(exciton.split("_")[1])
+        ref_layer = excitons_key_to_structure_key(self.exciton.split("_")[0])
+        coupled_layer = excitons_key_to_structure_key(self.exciton.split("_")[1])
         # Compute the in-plane momentum (k parallel)
         eps = 1.
         # Compute the dielectric function.

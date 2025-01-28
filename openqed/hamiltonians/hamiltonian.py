@@ -22,10 +22,6 @@ from openqed.grid.grid import Grid
 class Hamiltonian(ABC):
     """This class is the base abstract Hamiltonain class. All modules in the `hamiltonians` folder
     and subfolders must inherit from this class.
-
-    Attributes:
-        `name`: The name of the Hamiltonian.
-        `terms`: a list of sctrings representing the terms of the Hamiltonian.
     """
     def __init__(self,
                 name: str,
@@ -35,14 +31,14 @@ class Hamiltonian(ABC):
 
         Args:
             name: The name of the Hamiltonian.
-            terms: a list of sctrings representing the terms of the Hamiltonian.
+            terms: a list of strings representing the terms of the Hamiltonian.
         """
         self.name: str = name
         self.terms: list[str] = terms
         self.grid: Grid = grid
 
     @abstractmethod
-    def get_hamiltonian(self, **kwargs) -> npt.NDArray[np.float64] | npt.NDArray[np.complex128]:
+    def get_hamiltonian(self) -> npt.NDArray[np.float64] | npt.NDArray[np.complex128]:
         """
         This method generates the Hamiltonian from the terms. It returns the Hamiltonian as a matrix
         """
