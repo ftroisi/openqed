@@ -21,6 +21,7 @@ from ase.units import Bohr
 from tests.openqed_test import BaseOpenqedTest
 from openqed.grid.grid import GridType
 from openqed.grid.k_space_grid import KSpaceGrid
+from openqed.unit_cells.hexagonal_unit_cell import HexagonalUnitCell
 
 class TestKSpaceGrid(BaseOpenqedTest):
     """ Test class for the k space grid """
@@ -38,6 +39,8 @@ class TestKSpaceGrid(BaseOpenqedTest):
             'y': (np.float64(-0.02), np.float64(0.02))
         }
         self.grid_2d = KSpaceGrid(boundaries=boundaries, spacing=spacing)
+        # Define the hexagonal unit cell
+        self.hexagonal_unit_cell = HexagonalUnitCell(np.float64(3.32) / Bohr)
 
     # 1. Test the grid attribute (mesh and type)
 
@@ -137,13 +140,12 @@ class TestKSpaceGrid(BaseOpenqedTest):
         point = np.array([0.01, 0.015])
         index_before_proj = self.grid_2d.get_point_index(point)
         # Check that the projection method does not raise any error
-        self.grid_2d.project_to_unit_cell(real_space_lattice_parameter=np.float64(3.32) / Bohr)
+        self.grid_2d.project_to_unit_cell(self.hexagonal_unit_cell)
         # Check that the point was projected to the unit cell only in the new grid
         index_after_proj = self.grid_2d.get_point_index(point)
         self.assertEqual(index_after_proj, index_before_proj)
         # Now cache the projected grid
-        self.grid_2d.project_to_unit_cell(
-            real_space_lattice_parameter=np.float64(3.32) / Bohr, cache_result=True)
+        self.grid_2d.project_to_unit_cell(self.hexagonal_unit_cell, cache_result=True)
         index_after_proj = self.grid_2d.get_point_index(point)
         self.assertNotEqual(index_after_proj, index_before_proj)
         # Finally, check that the new value of the reference point is correct

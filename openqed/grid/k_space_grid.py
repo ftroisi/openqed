@@ -19,6 +19,7 @@ import numpy as np
 import numpy.typing as npt
 from openqed.io.input_file import InputFile
 from .grid import Grid, GridType
+from openqed.unit_cells.hexagonal_unit_cell import HexagonalUnitCell
 
 def docstring_inherit(parent):
     def inherit(obj):
@@ -108,8 +109,7 @@ class KSpaceGrid(Grid):
         return flat_gr
 
     def project_to_unit_cell(self,
-                            real_space_lattice_parameter: np.float64 | None = None,
-                            k_space_lattice_parameter: np.float64 | None = None,
+                            unit_cell: HexagonalUnitCell,
                             cache_result: bool = False) -> npt.NDArray[np.float64]:
         """This method projects the grid to the unit cell
 
@@ -125,37 +125,7 @@ class KSpaceGrid(Grid):
         if self.dimensions != 2:
             raise NotImplementedError("This method is only available for 2D grids")
         flat_gr: npt.NDArray[np.float64] = np.dot(
-            self.flat_grid(),
-            get_k_space_hexagonal_cell(
-                real_space_lattice_parameter=real_space_lattice_parameter,
-                k_space_lattice_parameter=k_space_lattice_parameter
-            ))
+            self.flat_grid(), unit_cell.get_lattice_vectors(self.grid_type))
         if cache_result:
             self._flat_grid = flat_gr
         return flat_gr
-
-def get_k_space_hexagonal_cell(
-        real_space_lattice_parameter: np.float64 | None = None,
-        k_space_lattice_parameter: np.float64 | None = None) -> npt.NDArray[np.float64]:
-    """This method computes the hexagonal cell in k space of a 2D material.
-
-    Args:
-        real_space_lattice_parameter: the lattice constant in the real space (in atomic units).
-        k_space_lattice_parameter: lattice constant in the reciprocal lattice (in atomic units).
-
-    Returns:
-        The hexagonal cell in k space
-    """
-    if real_space_lattice_parameter is not None:
-        real_lattice = [
-            [real_space_lattice_parameter, 0],
-            [real_space_lattice_parameter / 2, real_space_lattice_parameter * 3**0.5 / 2]
-        ]
-        return np.array(2. * np.pi * np.linalg.inv(real_lattice).T, dtype=np.float64)
-    if k_space_lattice_parameter is not None:
-        rec_lattice = [
-            [k_space_lattice_parameter, 0],
-            [k_space_lattice_parameter / 2, k_space_lattice_parameter * 3**0.5 / 2]
-        ]
-        return np.array(rec_lattice, dtype=np.float64)
-    raise ValueError("You must provide either the real lattice or the lattice constant")
