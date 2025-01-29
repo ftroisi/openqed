@@ -18,8 +18,8 @@ import gc
 import numpy as np
 import numpy.typing as npt
 from openqed.io.input_file import InputFile
-from .grid import Grid, GridType
-from openqed.unit_cells.hexagonal_unit_cell import HexagonalUnitCell
+from openqed.grid.grid import Grid, GridType
+from openqed.unit_cells.unit_cell import UnitCell
 
 def docstring_inherit(parent):
     def inherit(obj):
@@ -109,7 +109,7 @@ class KSpaceGrid(Grid):
         return flat_gr
 
     def project_to_unit_cell(self,
-                            unit_cell: HexagonalUnitCell,
+                            unit_cell: UnitCell,
                             cache_result: bool = False) -> npt.NDArray[np.float64]:
         """This method projects the grid to the unit cell
 
