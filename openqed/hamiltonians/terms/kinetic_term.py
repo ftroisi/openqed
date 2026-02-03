@@ -42,7 +42,7 @@ class KineticTerm(HamiltonianTerm):
         if isinstance(hamiltonian.grid, RealSpaceGrid):
             raise NotImplementedError("RealSpaceGrid is not supported yet")
         # Save the mass of the particle
-        self.mass = mass
+        self._mass = mass
 
     @property
     def mass(self) -> np.float64:

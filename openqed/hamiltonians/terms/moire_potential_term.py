@@ -151,19 +151,16 @@ class MoirePotentialTerm(HamiltonianTerm):
         Returns:
             The discretized twist angle in degrees
         """
-        spacing: np.float64 = np.float64(np.linalg.norm(flat_k_grid[1] - flat_k_grid[0])) / 2
         # First, rotate the lattice vectors by the twist angle
-        rotated_lattice_vectors: npt.NDArray[np.float64] = np.array(
-                [rotate_vector(twist_angle, v) for v in lattice_vectors], dtype=np.float64)
+        first_rotated_lattice_vectors: npt.NDArray[np.float64] = np.array(
+                rotate_vector(twist_angle, lattice_vectors[0]), dtype=np.float64)
         # Find the index of the k-point that is closest to the rotated top lattice vector
-        index_closest_k_point = np.where(
-            (np.abs(flat_k_grid[:, 0] - rotated_lattice_vectors[0, 0]) < spacing) &
-            (np.abs(flat_k_grid[:, 1] - rotated_lattice_vectors[0, 1]) < spacing))[0][0]
+        index_closest_k_point = self.hamiltonian.grid.get_point_index(first_rotated_lattice_vectors)
         # Compute the discretized twist angle
         denominator = np.linalg.norm(flat_k_grid[index_closest_k_point]) *\
-                                     np.linalg.norm(rotated_lattice_vectors[0])
+                                     np.linalg.norm(first_rotated_lattice_vectors)
         discretized_twist_angle = np.float64(np.degrees(np.arccos(
-            np.dot(flat_k_grid[index_closest_k_point], rotated_lattice_vectors[0]) / denominator)
+            np.dot(flat_k_grid[index_closest_k_point], first_rotated_lattice_vectors) / denominator)
         ))
         return discretized_twist_angle
 
@@ -173,7 +170,7 @@ class MoirePotentialTerm(HamiltonianTerm):
         [1].
 
         Returns:
-            A 2D array, with the size of the grid, representing the Moiré potential
+            A 1D array, with the size of the grid, representing the Moiré potential
         """
         flat_k_grid = self.hamiltonian.grid.flat_grid()
         spacing: np.float64 = np.float64(np.linalg.norm(flat_k_grid[1] - flat_k_grid[0])) / 2
