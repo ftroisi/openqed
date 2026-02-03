@@ -1,4 +1,4 @@
-# Copyright 2024 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This module contains the base abstract Hamiltonain class"""
+"""This module contains the base abstract Hamiltonian class"""
 
 from abc import ABC, abstractmethod
 import numpy as np
@@ -20,14 +20,14 @@ import numpy.typing as npt
 from openqed.grid.grid import Grid
 
 class Hamiltonian(ABC):
-    """This class is the base abstract Hamiltonain class. All modules in the `hamiltonians` folder
+    """This class is the base abstract Hamiltonian class. All modules in the `hamiltonians` folder
     and subfolders must inherit from this class.
     """
     def __init__(self,
                 name: str,
                 terms: list[str],
                 grid: Grid) -> None:
-        """Initialize the Hamiltonain
+        """Initializes the Hamiltonian
 
         Args:
             name: The name of the Hamiltonian.

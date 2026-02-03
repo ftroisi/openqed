@@ -1,4 +1,4 @@
-# Copyright 2024 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This module contains the base abstract HamiltonainTerm class"""
+"""This module contains the base abstract HamiltonianTerm class"""
 
 from abc import ABC, abstractmethod
 from openqed.hamiltonians.hamiltonian import Hamiltonian
 
 class HamiltonianTerm(ABC):
     """
-    This class is the base abstract HamiltonainTerm class. All modules in the `hamiltonians/terms`
+    This class is the base abstract HamiltonianTerm class. All modules in the `hamiltonians/terms`
     folder and subfolders must inherit from this class.
     """
     def __init__(self, hamiltonian: Hamiltonian) -> None:
