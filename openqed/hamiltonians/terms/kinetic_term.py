@@ -65,5 +65,5 @@ class KineticTerm(HamiltonianTerm):
             The Kinetic term as a 1D array
         """
         # The kinetic term is a diagonal matrix with the squared norm of the
-        # momentum divided by the effective mass. Thus, we only return it as a 1D array
+        # momentum divided by the effective mass. Thus, we only return it as a 1D array
         return np.linalg.norm(self.hamiltonian.grid.flat_grid(), axis=1)**2 / (2 * self.mass)

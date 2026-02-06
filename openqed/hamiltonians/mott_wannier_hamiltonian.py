@@ -15,9 +15,11 @@
 """This module contains the Mott-Wannier Hamiltonian class"""
 
 from typing import get_type_hints, cast
+from enum import Enum
+from collections import OrderedDict
+
 import numpy as np
 import numpy.typing as npt
-import scipy.sparse.linalg as ssl
 
 from openqed.grid.k_space_grid import KSpaceGrid
 from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian
@@ -26,6 +28,10 @@ from openqed.hamiltonians.terms.kinetic_term import KineticTerm
 from openqed.hamiltonians.terms.effective_2d_coulomb import Effective2DCoulombPotential
 from openqed.hamiltonians.types.bilayer_excitons import (
     BilayerExcitons, BilayerStructure, structure_key_to_exciton_key)
+
+class MottWannierHamiltonianTerms(Enum):
+    KINETIC = "kinetic_term"
+    EFFECTIVE_2D_COULOMB = "effective_2d_coulomb"
 
 class MottWannierHamiltonian(MatterHamiltonian):
     """
@@ -44,7 +50,6 @@ class MottWannierHamiltonian(MatterHamiltonian):
         """Initialize the Mott-Wannier Hamiltonian
 
         Args:
-            name: The name of the Hamiltonian.
             terms: a list of strings representing the terms of the Hamiltonian.
             exciton: The exciton for which the analytical screened potential is computed. It is a string
                 with the format `li_lj`, where `i` and `j` are numbers and the whole string is a key of
@@ -59,19 +64,17 @@ class MottWannierHamiltonian(MatterHamiltonian):
         """
         # First, initialize the base Hamiltonian class
         super().__init__("Mott-Wannier", terms, grid=grid)
+        self.term_to_instance: "OrderedDict[MottWannierHamiltonianTerms, HamiltonianTerm]" = OrderedDict()
         self.exciton = exciton
         self.effective_masses = self._get_effective_mass(
             electron_effective_mass=electron_effective_mass,
             hole_effective_mass=hole_effective_mass)
         # Initialize the Hamiltonian terms
-        self.term_to_instance: dict[str, HamiltonianTerm] = {}
-        for term in terms:
-            if term == "kinetic_term":
+        for term in [MottWannierHamiltonianTerms(t) for t in terms]:
+            if term == MottWannierHamiltonianTerms.KINETIC:
                 self.term_to_instance[term] = \
-                    KineticTerm(self, mass=self.effective_masses.get(exciton, 0))
-            elif term == "effective_2d_coulomb":
-                if thicknesses is None or dielectric_constants is None:
-                    raise ValueError("The thicknesses and dielectric constants must be defined")
+                    KineticTerm(self, mass=self.effective_masses.get(self.exciton, np.float64(0.0)))
+            elif term == MottWannierHamiltonianTerms.EFFECTIVE_2D_COULOMB:
                 self.term_to_instance[term] = \
                     Effective2DCoulombPotential(self,
                                                 exciton=exciton,
@@ -81,8 +84,8 @@ class MottWannierHamiltonian(MatterHamiltonian):
     @property
     def exciton(self) -> str:
         """
-        The exciton for which the analytical screened potential is computed. It is a string with the
-        format `li_lj`, where `i` and `j` are numbers and the whole string is a key of
+        The exciton for which the screened potential is computed analytically. It is a string with the
+        format `li_lj`, where `i` and `j` are numbers, and the whole string is a key of
         `:class:BilayerExcitons`. For instance, specifying `l1_l1` will compute the analytical screened
         potential for the intralayer exciton of the first layer
         """
@@ -93,29 +96,50 @@ class MottWannierHamiltonian(MatterHamiltonian):
         if exciton not in get_type_hints(BilayerExcitons):
             raise ValueError(
                 f"Unknown exciton type: {exciton}. Supported types: {get_type_hints(BilayerExcitons)}")
+        # Update the Hamiltonian terms that depend on the exciton.
+        for term, instance in self.term_to_instance.items():
+            if term == MottWannierHamiltonianTerms.KINETIC:
+                # Update the mass of the kinetic term
+                cast(KineticTerm, instance).mass = self.effective_masses.get(exciton, 0)
+            elif term == MottWannierHamiltonianTerms.EFFECTIVE_2D_COULOMB:
+                # Update the exciton for the effective 2D Coulomb potential
+                cast(Effective2DCoulombPotential, instance).exciton = exciton
         self._exciton = exciton
 
-    def _get_effective_mass(self,
-                            electron_effective_mass: BilayerStructure | None = None,
-                            hole_effective_mass: BilayerStructure | None = None
-        ) -> BilayerExcitons:
-        """Get the effective mass of the electron and hole for a given exciton"""
-        # First, check that the effective masses are defined correctly
-        if electron_effective_mass is None or hole_effective_mass is None:
-            raise ValueError("The effective masses for electrons and holes must be defined")
+    @staticmethod
+    def _get_effective_mass(
+            electron_effective_mass: BilayerStructure,
+            hole_effective_mass: BilayerStructure
+    ) -> BilayerExcitons:
+        """Get the effective mass of the electron and hole for a given exciton.
+
+        Args:
+            electron_effective_mass: The effective mass of electrons in the bilayer structure.
+                Must contain at least 'layer1' and/or 'layer2' keys.
+            hole_effective_mass: The effective mass of holes in the bilayer structure.
+                Must have the same keys as electron_effective_mass.
+
+        Returns:
+            A dictionary mapping exciton types (e.g., 'l1_l1', 'l1_l2') to their reduced masses.
+
+        Raises:
+            ValueError: If the two structures don't have matching keys.
+
+        References:
+            https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.53.1391
+        """
         if electron_effective_mass.keys() != hole_effective_mass.keys():
-            raise ValueError(
-                "The effective masses for electrons and holes must be defined for the same layers")
-        # https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.53.1391
-        # Then, build the effective masses for all possible excitons
+            raise ValueError("The effective masses for electrons and holes must be defined for the same layers")
+
+        # Build the effective masses for all possible excitons
         exciton_effective_mass: BilayerExcitons = {}
         for elec_key in electron_effective_mass.keys():
             l1 = structure_key_to_exciton_key(elec_key)
             for hole_key in hole_effective_mass.keys():
                 l2 = structure_key_to_exciton_key(hole_key)
-                key = f"{l1}_{l2}"
-                exciton_effective_mass[key] = \
-                    (1/electron_effective_mass[elec_key] + 1/hole_effective_mass[hole_key])**(-1)
+                exciton_effective_mass[f"{l1}_{l2}"] = \
+                    (1 / electron_effective_mass[elec_key] + 1 / hole_effective_mass[hole_key]) ** (-1)
+
         return exciton_effective_mass
 
     def get_hamiltonian(self) -> npt.NDArray[np.float64]:
@@ -123,60 +147,20 @@ class MottWannierHamiltonian(MatterHamiltonian):
         See equation (13) of the supplementary information of
         https://pubs.acs.org/doi/10.1021/acs.nanolett.0c03019?fig=fig4&ref=pdf
 
-        Args:
-            exciton (str): the exciton for which the Hamiltonian is computed. Its value can be
-                any key of the BilayerExcitons class
-
         Returns:
-            The Hamiltonians that describe the exciton wavefunction for the chosen exciton
+            The Hamiltonian that describes the exciton wavefunction for the chosen exciton
         """
         # First compute mesh size
         mesh_size = np.size(self.grid.flat_grid(), 0)
         hamiltonian: npt.NDArray[np.float64] = np.zeros((mesh_size, mesh_size), dtype=np.float64)
-        # Then, get the different terms
-        for term in self.terms:
-            if term == "kinetic_term":
-                # Update the mass of the kinetic term
-                cast(KineticTerm, self.term_to_instance[term]).mass =\
-                    self.effective_masses.get(self.exciton, 0)
-                # Add the kinetic term to the Hamiltonian
-                hamiltonian += np.diag(self.term_to_instance[term].get_hamiltonian_term())
-            elif term == "effective_2d_coulomb":
-                # Update the exciton for the effective 2D Coulomb potential
-                cast(Effective2DCoulombPotential, self.term_to_instance[term]).exciton = self.exciton
-                # Add the effective 2D Coulomb potential to the Hamiltonian
-                hamiltonian += self.term_to_instance[term].get_hamiltonian_term()
+        # Then, get the different terms
+        for term, instance in self.term_to_instance.items():
+            if term == MottWannierHamiltonianTerms.KINETIC:
+                hamiltonian += np.diag(instance.get_hamiltonian_term())
+            elif term == MottWannierHamiltonianTerms.EFFECTIVE_2D_COULOMB:
+                hamiltonian += instance.get_hamiltonian_term()
+
         return hamiltonian
 
-    def diagonalize_hamiltonian(self,
-                                hamiltonian,
-                                **kwargs
-        ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-        """Diagonalize the Hamiltonian
-
-        Args:
-            hamiltonian: A NxN numpy array representing hermitian matrix to diagonalize
-            num_eigenvalues: The number of eigenvalues and eigenvectors to find.
-                Defaults to None, meaning that all eigenvalues will be found (exact diagonalization)
-
-        Returns:
-            A tuple containing the eigenvalues and eigenvectors of the Hamiltonian
-        """
-        num_eigenvalues: int = kwargs.get('num_eigenvalues', None)
-        if num_eigenvalues is None:
-            eigenval, eigenvec = np.linalg.eigh(hamiltonian)
-        else:
-            eigenval, eigenvec = ssl.eigsh(
-                hamiltonian,
-                k=num_eigenvalues,
-                which="SM",
-                tol=1e-7, # type: ignore
-                return_eigenvectors=True
-            )
-        return eigenval, eigenvec
-
-    def get_matter_hamiltonian(self, **kwargs):
-        raise NotImplementedError()
-
-    def get_interaction_hamiltonian(self, **kwargs):
+    def get_interaction_hamiltonian(self) -> npt.NDArray[np.float64]:
         raise NotImplementedError()
