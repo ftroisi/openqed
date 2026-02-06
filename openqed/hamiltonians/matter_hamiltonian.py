@@ -26,18 +26,10 @@ class MatterHamiltonian(Hamiltonian, ABC):
     """
 
     @abstractmethod
-    def get_matter_hamiltonian(self, **kwargs) -> npt.NDArray[np.float64 | np.complex128]:
-        """
-        This method generates the uncoupled matter hamiltonian for this class. It is the term that
-        describes the matter system without the radiation field
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_interaction_hamiltonian(self, **kwargs) -> npt.NDArray[np.float64 | np.complex128]:
+    def get_interaction_hamiltonian(self) -> npt.NDArray[np.float64 | np.complex128]:
         """
         This method generates the interaction hamiltonian for this class. In a light-matter system,
         this term describes the interaction between the matter system and the radiation field
         (:math:`\\p \\cdot \\mathbf{A}`).
         """
-        raise NotImplementedError()
+        pass
