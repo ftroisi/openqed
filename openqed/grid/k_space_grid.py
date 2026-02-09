@@ -88,10 +88,10 @@ class KSpaceGrid(Grid):
         - calling `flat_grid[1]` returns an array with all the coordinates of the second point
 
         Args:
-            cache_result: If True, the flate grid will be stored in memory. The next time that this
+            cache_result: If True, the flat grid will be stored in memory. The next time that this
                 method is called, the grid will be returned without recomputing it.
         """
-        # If the grid is already computed, return it
+        # If the grid is already computed, return it
         if self._flat_grid is not None:
             return self._flat_grid
         # Otherwise, compute the grid
@@ -107,6 +107,10 @@ class KSpaceGrid(Grid):
         if cache_result:
             self._flat_grid = flat_gr
         return flat_gr
+
+    def get_spacing(self) -> np.float64:
+        """Get the spacing of the grid"""
+        return np.float64(np.linalg.norm(self.flat_grid()[1] - self.flat_grid()[0])) / 2
 
     def project_to_unit_cell(self,
                             unit_cell: UnitCell,

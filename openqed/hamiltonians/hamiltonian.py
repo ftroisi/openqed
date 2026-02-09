@@ -47,7 +47,8 @@ class Hamiltonian(ABC):
         """
         pass
 
-    def diagonalize_hamiltonian(self,
+    @classmethod
+    def diagonalize_hamiltonian(cls,
                                 hamiltonian: npt.NDArray[np.float64] | npt.NDArray[np.complex128],
                                 number_of_eigenvalues: int | None = None,
                                 restart_path: str | None = None

@@ -15,6 +15,9 @@
 """This module contains the Moiré Hamiltonian class"""
 
 from typing import Literal, Dict
+from enum import Enum
+from collections import OrderedDict
+from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
@@ -23,9 +26,22 @@ from openqed.grid.grid import Grid
 from openqed.grid.real_space_grid import RealSpaceGrid
 from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
-from openqed.hamiltonians.terms.moire_potential_term import MoirePotentialTerm
+from openqed.hamiltonians.terms.kinetic_term import KineticTerm
+from openqed.hamiltonians.terms.free_exciton_term import FreeExcitonTerm
+from openqed.hamiltonians.terms.moire_potential_term import MoirePotentialTerm, MoirePotentialParameters
 
-from openqed.hamiltonians.types.bilayer_excitons import BilayerExcitons, BilayerStructure, excitons_key_to_structure_key
+from openqed.hamiltonians.types.bilayer_excitons import BilayerExcitons, BilayerStructure, structure_key_to_exciton_key
+
+class MoireExcitonHamiltonianTerms(Enum):
+    FREE_EXCITON = "free_exciton"
+    MOIRE_POTENTIAL = "moire_potential"
+
+@dataclass
+class MoireExcitonsMomentumMatrixElements:
+    """This class contains the momentum matrix elements for the Moiré excitons."""
+    x: BilayerExcitons | None
+    y: BilayerExcitons | None
+    z: BilayerExcitons | None
 
 class MoireExcitonHamiltonian(MatterHamiltonian):
     """
@@ -33,29 +49,33 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
     arises in a multilayered structure.
 
     References:
-        [1] Tunable Phases of Moiré Excitons in van der Waals Heterostructures:
+        [1] Tunable Phases of Moiré Excitons in van der Waals Heterostructures
             https://pubs.acs.org/doi/10.1021/acs.nanolett.0c03019
+        [2] Cavity-QED-controlled two-dimensional Moiré excitons without twisting
+            https://www.nature.com/articles/s41467-025-67570-2
     """
     def __init__(self,
                 terms: list[str],
                  *,
                 grid: Grid,
                 wannier_states: BilayerExcitons,
+                wannier_binding_energies: BilayerExcitons,
+                band_gap: BilayerExcitons,
+                moire_matrix_elements: MoireExcitonsMomentumMatrixElements,
+                electron_effective_mass: BilayerStructure | None = None,
+                hole_effective_mass: BilayerStructure | None = None,
+                moire_parameters: MoirePotentialParameters,
             ) -> None:
         """Initialize the Moiré Exciton Hamiltonian
 
         Args:
-            name: The name of the Hamiltonian.
             terms: a list of strings representing the terms of the Hamiltonian.
-            exciton: The exciton for which the analytical screened potential is computed. It is a string
-                with the format `li_lj`, where `i` and `j` are numbers and the whole string is a key of
-                `:class:BilayerExcitons`. For instance, specifying `l1_l1` will compute the analytical
-                screened potential for the intralayer exciton of the first layer
             grid: The grid object to use. The Moiré Exciton Hamiltonian will be represented on this grid.
+            wannier_states: A dictionary mapping exciton types (e.g., 'l1_l1', 'l1_l2') to their Wannier states.
+            wannier_binding_energies: A dictionary mapping exciton types (e.g., 'l1_l1', 'l1_l2') to their Wannier
+                binding energies (eigenvalues of the Wannier equation).
             electron_effective_mass: The effective mass of the electrons in the bilayer structure.
             hole_effective_mass: The effective mass of the holes in the bilayer structure.
-            thicknesses: The thicknesses of the layers in the bilayer structure.
-            dielectric_constants: The dielectric constants of the layers in the bilayer structure.
         """
         # TODO: Add RealSpaceGrid support
         if isinstance(grid, RealSpaceGrid):
@@ -66,121 +86,138 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
         self.wannier_states = wannier_states
         if len(wannier_states) != 1:
             raise ValueError("Only one exciton type is supported")
+        self.exciton = next(k for k, v in wannier_states.items() if v is not None)
+        self.number_of_excitonic_states = wannier_states.get(self.exciton, np.array([])).shape[1]
+        # Save the moire matrix elements
+        self.matrix_elements = moire_matrix_elements
         # Initialize the Hamiltonian terms
-        self._moire_potential_term: Dict[str, MoirePotentialTerm] | None = None
+        self.terms_to_instances: OrderedDict[MoireExcitonHamiltonianTerms, HamiltonianTerm] = OrderedDict()
+        for term in [MoireExcitonHamiltonianTerms(t) for t in terms]:
+            if term == MoireExcitonHamiltonianTerms.FREE_EXCITON:
+                kinetic_term = KineticTerm(self, mass=self._get_total_mass(
+                            electron_effective_mass, hole_effective_mass).get(self.exciton, np.float64(0.0)))
+                self.terms_to_instances[term] = FreeExcitonTerm(self,
+                                                                kinetic_term=kinetic_term,
+                                                                wannier_binding_energies=wannier_binding_energies,
+                                                                band_gap=band_gap)
+            elif term == MoireExcitonHamiltonianTerms.MOIRE_POTENTIAL:
+                self.terms_to_instances[term] = MoirePotentialTerm(self,
+                                                                   wannier_eigenvectors=wannier_states,
+                                                                   wannier_eigenvalues=wannier_binding_energies,
+                                                                   moire_parameters=moire_parameters)
 
-    @property
-    def moire_potential_term(self) -> Dict[str, MoirePotentialTerm]:
-        """"The Moiré potential term."""
-        if self._moire_potential_term is None:
-            raise ValueError("The Moiré potential term must be set before being used")
-        return self._moire_potential_term
-
-    @moire_potential_term.setter
-    def moire_potential_term(self, moire_potential_term: Dict[str, MoirePotentialTerm]) -> None:
-        self._moire_potential_term = moire_potential_term
-
-    def get_form_factor(self,
-                        psi: npt.NDArray[np.complex128],
-                        q_idx: int) -> tuple[np.complex128, np.complex128]:
-        """
-        This method computes for the form factor appearing in Eq. 16 of the Supporting Info of [1].
-        The idea is to shift the vector psi (which is known on the k-k') base
-        by the vector q (a vector on the kpt grid).
+    @staticmethod
+    def _get_total_mass(
+            electron_effective_mass: BilayerStructure,
+            hole_effective_mass: BilayerStructure
+    ) -> BilayerExcitons:
+        """Get the total mass of the electron and hole for a given exciton.
 
         Args:
-            psi: the wavefunction of the exciton
-            q_idx: the index of the q vector for which the form factor is computed
+            electron_effective_mass: The effective mass of electrons in the bilayer structure.
+                Must contain at least 'layer1' and/or 'layer2' keys.
+            hole_effective_mass: The effective mass of holes in the bilayer structure.
+                Must have the same keys as electron_effective_mass.
 
         Returns:
-            A tuple where each element is the form factor at the request k point:
-            [F(q) = sum_k conj(psi(k))*psi(k+q), F^*(q) = sum_k psi(k)*conj(psi(k+q))]
-        """
-        flat_k_grid = self.grid.flat_grid()
-        size: int = np.size(flat_k_grid, 0)
-        form_factor: np.complex128 = np.complex128(0)
-        form_factor_conj: np.complex128 = np.complex128(0)
-        # Define the k + q grid
-        flat_k_p_q_grid = flat_k_grid[:, :] + flat_k_grid[q_idx, :]
-        # Loop over the k grid to compute the form factor
-        for i in range(size):
-            if np.abs(psi[i]) < 1e-9:
-                continue
-            # Find the indexes for which the k+q grid matches the original k grid
-            idx = self.grid.get_point_index(flat_k_p_q_grid[i])
-            if np.size(idx) == 1:
-                # Compute the form factor
-                form_factor += np.conj(psi[i]) * psi[idx]
-                form_factor_conj += psi[i] * np.conj(psi[idx])
-        return form_factor, form_factor_conj
+            A dictionary mapping exciton types (e.g., 'l1_l1', 'l1_l2') to their reduced masses.
 
-    def get_moire_hamiltonian(self) -> npt.NDArray[np.complex128]:
-        # 0. Create a matrix with the dimension of the grid
-        flat_k_grid = self.grid.flat_grid()
-        k_grid_size = np.size(flat_k_grid, 0)
-        hamiltonian: npt.NDArray[np.complex128] =\
-            np.zeros((k_grid_size, k_grid_size), dtype=np.complex128)
-        # 1. First, identify for what layers the Moiré potential should be computed
-        exciton_type = list(self.wannier_states.keys())[0]
-        layer1 = excitons_key_to_structure_key(exciton_type.split("_")[0])
-        layer2 = excitons_key_to_structure_key(exciton_type.split("_")[1])
-        moire_potential_term_layer1 = self.moire_potential_term.get(layer1)
-        moire_potential_term_layer2 = self.moire_potential_term.get(layer2)
-        if (moire_potential_term_layer1 is None or moire_potential_term_layer2 is None):
-            raise ValueError("The Moiré potential term must be set for both layers before being used")
-        # 2. Compute the Moire potential and determine the q vectors
-        moire_potential_layer1 = moire_potential_term_layer1.get_hamiltonian_term()
-        moire_potential_layer2 = moire_potential_term_layer2.get_hamiltonian_term()
-        moire_indexes = np.where(np.abs(moire_potential_layer1) > 1e-12)[0]
-        n_points = int(int(moire_potential_term_layer1.moire_symmetry[1]) / 2)
-        if np.size(moire_indexes) != n_points:
-            raise ValueError("The number of points in the Moiré potential is not correct")
-        # 3. Compute the Hamiltonian
-        for moire_index in moire_indexes:
-            # 3.1 Compute the form factor for the exciton
-            form_factor, form_factor_conj = self.get_form_factor(
-                self.wannier_states[exciton_type], moire_index)
-            # 3.2 Compute the Moire potential
-            moire_potential = (moire_potential_layer1[moire_index] * form_factor -
-                               moire_potential_layer2[moire_index] * form_factor_conj)
-            # 3.3 Find the index of the first point
-            diagonal_index = self.grid.get_point_index(flat_k_grid[moire_index])
-            hamiltonian += (np.diag(moire_potential, k=diagonal_index) +
-                            np.diag(np.conj(moire_potential), k=-diagonal_index))
+        Raises:
+            ValueError: If the two structures don't have matching keys.
+
+        References:
+            https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.53.1391
+        """
+        if electron_effective_mass.keys() != hole_effective_mass.keys():
+            raise ValueError("The effective masses for electrons and holes must be defined for the same layers")
+
+        # Build the total masses for all possible excitons
+        exciton_total_mass: BilayerExcitons = {}
+        for elec_key in electron_effective_mass.keys():
+            l1 = structure_key_to_exciton_key(elec_key)
+            for hole_key in hole_effective_mass.keys():
+                l2 = structure_key_to_exciton_key(hole_key)
+                exciton_total_mass[f"{l1}_{l2}"] = electron_effective_mass[elec_key] + hole_effective_mass[hole_key]
+
+        return exciton_total_mass
+
+    def get_hamiltonian(self) -> npt.NDArray[np.float64]:
+        """
+        This method builds the Moiré Excitons Hamiltonian for a couple of layers.
+        See Eq. 14 and 15 of the supplementary information of Ref. [1].
+
+        Returns:
+            The Hamiltonian that describes the Moiré excitons
+        """
+        # First compute mesh size
+        mesh_size = np.size(self.grid.flat_grid(), 0)
+        hamiltonian: npt.NDArray[np.float64] = np.zeros((mesh_size, mesh_size), dtype=np.float64)
+        # Then, get the different terms
+        for term, instance in self.terms_to_instances.items():
+            if term == MoireExcitonHamiltonianTerms.FREE_EXCITON:
+                hamiltonian += np.diag(instance.get_hamiltonian_term())
+            elif term == MoireExcitonHamiltonianTerms.MOIRE_POTENTIAL:
+                hamiltonian += instance.get_hamiltonian_term()
+
         return hamiltonian
 
-    def get_hamiltonian(self) -> npt.NDArray[np.complex128]:
-        # 0. Create a matrix with the dimension of the grid
-        flat_k_grid = self.grid.flat_grid()
-        k_grid_size = np.size(flat_k_grid, 0)
-        hamiltonian: npt.NDArray[np.complex128] =\
-            np.zeros((k_grid_size, k_grid_size), dtype=np.complex128)
-        # 1. First, identify for what layers the Moiré potential should be computed
-        exciton_type = list(self.wannier_states.keys())[0]
-        layer1 = excitons_key_to_structure_key(exciton_type.split("_")[0])
-        layer2 = excitons_key_to_structure_key(exciton_type.split("_")[1])
-        moire_potential_term_layer1 = self.moire_potential_term.get(layer1)
-        moire_potential_term_layer2 = self.moire_potential_term.get(layer2)
-        if (moire_potential_term_layer1 is None or moire_potential_term_layer2 is None):
-            raise ValueError("The Moiré potential term must be set for both layers before being used")
-        # 2. Compute the Moiré potential and determine the q vectors
-        moire_potential_layer1 = moire_potential_term_layer1.get_hamiltonian_term()
-        moire_potential_layer2 = moire_potential_term_layer2.get_hamiltonian_term()
-        moire_indexes = np.where(np.abs(moire_potential_layer1) > 1e-12)[0]
-        n_points = int(int(moire_potential_term_layer1.moire_symmetry[1]) / 2)
-        if np.size(moire_indexes) != n_points:
-            raise ValueError("The number of points in the Moiré potential is not correct")
-        # 3. Compute the Hamiltonian
-        for _, moire_index in enumerate(moire_indexes):
-            # 3.1 Compute the form factor for the exciton
-            form_factor, form_factor_conj = self.get_form_factor(
-                self.wannier_states[exciton_type], moire_index)
-            # 3.2 Compute the Moiré potential
-            moire_potential = (moire_potential_layer1[moire_index] * form_factor -
-                               moire_potential_layer2[moire_index] * form_factor_conj)
-            # 3. Compute the Hamiltonian
-            # Find the index of the first point
-            diagonal_index = self.grid.get_point_index(flat_k_grid[moire_index])
-            hamiltonian += (np.diag(moire_potential, k=diagonal_index) +
-                            np.diag(np.conj(moire_potential), k=-diagonal_index))
+    def get_interaction_hamiltonian(self,
+                                    light_momentum: npt.NDArray[np.float64],
+                                    light_polarization: Literal['x', 'y', 'z', 'xy', 'xz', 'yz', '+', '-']
+        ) -> Dict[Literal['x', 'y', 'z'], npt.NDArray[np.float64 | np.complex128]]:
+        kgr_size: int = np.size(self.grid.flat_grid(), 0)
+        size: int = kgr_size * self.number_of_excitonic_states
+        # Interaction Hamiltonian dimensions ('1 + ' is for the polaritonic GS):
+        # (number of modes, 1 + number_of_excitonic_states * grid_size, 1 + number_of_excitonic_states * grid_size)
+        hamiltonian = dict()
+        light_polarization = light_polarization.replace('+', 'xy').replace('-', 'xy')
+        for pol in light_polarization:
+            hamiltonian[pol] = np.zeros((light_momentum.shape[0], 1 + size, 1 + size), dtype=np.complex128)
+
+        # Calculating Matrix Elements Envelope Functions \Psi_0 -> \Psi_n
+        # the only non-zero matrix elements are the ones at Q=0
+        # ----------------------------------------------------------------
+        dipole_0n = dict()
+        # Loop over the number of excitons we want to include
+        for i in range(self.number_of_excitonic_states):
+            # Evaluate f for transitions from GS to n: see eq 7 and 8 of supporting info of
+            # https://pubs.acs.org/doi/full/10.1021/acs.nanolett.9b00183
+            # => Sum on all k point for a specific exciton: (1/n_kpt) * sum_k(wfn(k, exc))
+            f_0 = (1 / kgr_size) * np.sum(self.wannier_states[self.exciton][:, i])
+            for pol in light_polarization:
+                dipole_0n[pol] = (self.matrix_elements[pol][self.exciton] * f_0)
+
+        # Compute the spacing between two k points
+        spacing = self.grid.get_spacing()
+        for mode_idx in range(light_momentum.shape[0]):
+            q_ph = light_momentum[mode_idx]
+            # Find the index of the photon momentum in the grid
+            q0_idx = self.grid.get_point_index(q_ph) + 1
+            # 0->n transition
+            for pol in light_polarization:
+                hamiltonian[pol][mode_idx][0, q0_idx::kgr_size] = np.array(dipole_0n[pol][:]).conj()
+                hamiltonian[pol][mode_idx][q0_idx::kgr_size, 0] = np.array(dipole_0n[pol][:])
+            # Now account for moire-like effect of finite q photon
+            if not np.isclose(np.linalg.norm(q_ph), 0):
+                # ! Note well, this will only work for the first layer
+                form_factor_vv, form_factor_cc = \
+                    self.get_form_factor(self.wannier_states[self.exciton][:, 0], [q0_idx])
+                # See equation 9 of the supporting info of the paper
+                # https://pubs.acs.org/doi/full/10.1021/acs.nanolett.9b00183
+                finite_q_me: npt.NDArray[np.complex128] = \
+                    np.abs(q_ph) * (form_factor_cc[0] + form_factor_vv[0]) / self.eff_mass[self.exciton]
+                for k in range(kgr_size):
+                    # Define the Q + q_ph grid and get the index of the corresponding element.
+                    Q_plus_q = self.grid.flat_grid()[k, :] + q_ph
+                    idx = np.where(np.linalg.norm(self.grid.flat_grid() - Q_plus_q, axis=1) < spacing)[0]
+                    if len(idx) == 0:
+                        continue
+                    if len(idx) > 1:
+                        raise ValueError("The index of the Q + q grid is not unique")
+                    # +1 because the first element is the GS
+                    i: int = 1 + k
+                    j: int = 1 + idx[0]
+                    me: npt.NDArray[np.complex128] = np.conj(finite_q_me) if i > j else finite_q_me
+                    for pol in light_polarization:
+                        hamiltonian[pol][mode_idx][i, j] = me[0 if pol == 'x' else 1]
         return hamiltonian

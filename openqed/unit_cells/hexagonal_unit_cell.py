@@ -21,7 +21,7 @@ from openqed.unit_cells.unit_cell import UnitCell
 
 class HexagonalUnitCell(UnitCell):
     """
-    This class represents the HexagonalUnitCell. An exagonal unit cell is one of the possible 2D
+    This class represents the HexagonalUnitCell. A hexagonal unit cell is one of the possible 2D
     Bravais lattices. It is characterized by a single lattice parameter (the distance between two atoms),
     and it has a 120° angle between the lattice vectors.
     """

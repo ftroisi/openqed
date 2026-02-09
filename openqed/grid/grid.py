@@ -58,7 +58,7 @@ class Grid(ABC):
             self.spacing: dict[str, np.float64] = input_file.input["grid_spacing"]
             self.boundaries: dict[str, tuple[np.float64, np.float64]] = \
                 input_file.input["grid_boundaries"]
-        # Ensure that the keys of the `boundaries` and `spacing` dictionaries are the same
+        # Ensure that the keys of the `boundaries` and `spacing` dictionaries are the same
         if len(self.spacing.keys()) != len(self.boundaries.keys()):
             raise ValueError(
                 "The keys of the `boundaries` and `spacing` dictionaries must be the same." +
@@ -72,7 +72,12 @@ class Grid(ABC):
     @abstractmethod
     def flat_grid(self) -> npt.NDArray[np.float64]:
         """Get the flat grid"""
-        raise NotImplementedError()
+        pass
+
+    @abstractmethod
+    def get_spacing(self) -> np.float64:
+        """Get the spacing of the grid"""
+        pass
 
     def get_point_index(self,
                         point: tuple[np.float64 | float, ...] | npt.NDArray[np.float64]) -> int:
@@ -90,7 +95,7 @@ class Grid(ABC):
         for i in range(1, self.dimensions):
             grid_bitmap &= (np.abs(flat_grid[:, i] - point[i]) < self.spacing[spacing_keys[i]] / 2)
         index = np.where(grid_bitmap)[0]
-        # If more than one point is found, raise an error
+        # If more than one point is found, raise an error
         if index.shape[0] > 1:
             raise ValueError(f"More than one point found in the grid: {index}")
         return int(index[0])
