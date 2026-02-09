@@ -1,4 +1,4 @@
-# Copyright 2025 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ from openqed.hamiltonians.terms.kinetic_term import KineticTerm
 from openqed.hamiltonians.hamiltonian import Hamiltonian
 from openqed.grid.real_space_grid import RealSpaceGrid
 
+from openqed.hamiltonians.types.bilayer_excitons import BilayerExcitons
+
 class FreeExcitonTerm(HamiltonianTerm):
     """
     This class represents the FreeExcitonTerm.
@@ -36,37 +38,36 @@ class FreeExcitonTerm(HamiltonianTerm):
                  hamiltonian: Hamiltonian,
                  *,
                  kinetic_term: KineticTerm,
-                 energy_gap: np.float64,
-                 excitonic_binding_energy: np.float64) -> None:
+                 wannier_binding_energies: BilayerExcitons,
+                 band_gap: BilayerExcitons
+        ) -> None:
         """Initialize the FreeExcitonTerm class
 
         Args:
             hamiltonian: The Hamiltonian object to which the term belongs
             kinetic_term: The kinetic term of the Hamiltonian
-            energy_gap: The energy gap of the system. Its value should be in atomic units and must be
-                positive
-            excitonic_binding_energy: The energy of the excitonic bound state (e.g. 1s, 2s, ...). 
-                Its value should be in atomic units. This value is going to be summed to the energy gap,
-                thus, at least for the lowest states (i.e. 1s), it should be negative
+            wannier_binding_energies: A dictionary containing the Mott-Wannier binding energies for the different
+                excitons. The values are 1D arrays containing the Mott-Wannier binding energies for the different
+                excitonic states. For instance, the first values will refer to the 1s state, then 2s, ...
+            band_gap: A dictionary containing the band gap for the different excitons.
+
+        Raises:
+            ValueError: If the keys of the wannier_binding_energies and band_gap are not the same
+            ValueError: If the energy gap is negative
         """
         super().__init__(hamiltonian)
         if isinstance(hamiltonian.grid, RealSpaceGrid):
             raise NotImplementedError("RealSpaceGrid is not supported yet")
         # Save the mass of the particle
         self.kinetic_term = kinetic_term
-        self.energy_gap = energy_gap
-        if self.energy_gap < 0:
+        # Ensure that the keys of the wannier_binding_energies and band_gap are the same
+        if wannier_binding_energies.keys() != wannier_binding_energies.keys():
+            raise ValueError("The keys of the wannier_binding_energies and band_gap must be the same")
+        self.wannier_binding_energies: BilayerExcitons = wannier_binding_energies
+        self.band_gap: BilayerExcitons = band_gap
+        self.exciton = next(k for k, v in wannier_binding_energies.items() if v is not None)
+        if self.band_gap[self.exciton] < 0:
             raise ValueError("The energy gap must be positive")
-        self._excitonic_binding_energy = excitonic_binding_energy
-
-    @property
-    def excitonic_binding_energy(self) -> np.float64:
-        """The excitonic binding energy."""
-        return self._excitonic_binding_energy
-
-    @excitonic_binding_energy.setter
-    def mass(self, excitonic_binding_energy: np.float64) -> None:
-        self._excitonic_binding_energy: np.float64 = excitonic_binding_energy
 
     def get_hamiltonian_term(self) -> npt.NDArray[np.float64]:
         """
@@ -78,6 +79,8 @@ class FreeExcitonTerm(HamiltonianTerm):
         """
         # First, get the kinetic term
         kinetic_term = self.kinetic_term.get_hamiltonian_term()
+        # Create the array to return
+        hamiltonian = np.zeros((self.wannier_binding_energies[self.exciton].shape, kinetic_term.shape[0]), dtype=np.float64)
         # Then, sum the energy gap and the excitonic bound energy
-        return cast(npt.NDArray[np.float64],
-                    kinetic_term + self.energy_gap + self.excitonic_binding_energy)
+        hamiltonian = kinetic_term + self.band_gap[self.exciton] + self.wannier_binding_energies[self.exciton]
+        return cast(npt.NDArray[np.float64], hamiltonian)
