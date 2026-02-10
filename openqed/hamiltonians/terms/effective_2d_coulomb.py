@@ -1,4 +1,4 @@
-# Copyright 2024 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         `hamiltonian`: The Hamiltonian object of which this term is a part of.
 
     Note:
-        The formulas are taylored for a bilayer heterostructure, so you should use this class only
+        The formulas are tailored for a bilayer heterostructure, so you should use this class only
         for this kind of system.
     """
     def __init__(self,
@@ -45,7 +45,7 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         Args:
             hamiltonian: The Hamiltonian object to which the term belongs
             exciton: the exciton for which the analytical screened potential is computed. It is
-                a string with the format `li_lj`, where `i` and `j` are numbers and the whole string
+                a string with the format `li_lj`, where `i` and `j` are numbers, and the whole string
                 is a key of `:class:BilayerExcitons`. For instance, specifying `l1_l1` will compute
                 the analytical screened potential for the intralayer exciton of the first layer
             thicknesses: The thicknesses of the layers in the bilayer structure. The user must
@@ -56,6 +56,8 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         """
         super().__init__(hamiltonian)
         # Now set the properties of the bilayer structure
+        if thicknesses is None or dielectric_constants is None:
+            raise ValueError("The thicknesses and dielectric constants must be defined")
         self.dielectric_constants: BilayerStructure = dielectric_constants
         self.thicknesses: BilayerStructure = thicknesses
         # Set the exciton type
@@ -64,8 +66,8 @@ class Effective2DCoulombPotential(HamiltonianTerm):
     @property
     def exciton(self) -> str:
         """
-        The exciton for which the analytical screened potential is computed. It is a string with the
-        format `li_lj`, where `i` and `j` are numbers and the whole string is a key of
+        The exciton for which the screened potential is computed analytically. It is a string with the
+        format `li_lj`, where `i` and `j` are numbers, and the whole string is a key of
         `:class:BilayerExcitons`. For instance, specifying `l1_l1` will compute the analytical screened
         potential for the intralayer exciton of the first layer
         """
@@ -208,7 +210,7 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         Return:
             epsilon_ll(k): the value of the dielectric function on all the k grid
         """
-        # First, define some useful quantitites
+        # First, define some useful quantities
         eps_1, eps_2, eps_r, eps_l1, eps_l2 = \
             self._get_dielectric_constants(ref_layer=ref_layer,coupled_layer=coupled_layer)
         eps_l12: np.float64 = eps_l1 * eps_l2
@@ -245,7 +247,7 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         Return:
             epsilon_ll'(k): the value of the dielectric function on all the k grid
         """
-        # First, define some useful quantitites
+        # First, define some useful quantities
         eps_1, eps_2, _, eps_l1, eps_l2 = \
             self._get_dielectric_constants(ref_layer=ref_layer,coupled_layer=coupled_layer)
         d_l1, d_l2, d_inter = \
@@ -259,8 +261,7 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         denom *= (1 + eps_1/eps_l1 * np.tanh(k_grid * d_l1 / 2))
         denom *= (1 + eps_2/eps_l2 * np.tanh(k_grid * d_l2 / 2))
         # Note that eps will be an array with the dimensions of the k grid
-        return (cosh_kr * f_k * ((np.cosh(k_grid * d_l1) * np.cosh(k_grid * d_l2)) / denom)
-                ).astype(np.float64)
+        return (cosh_kr * f_k * ((np.cosh(k_grid * d_l1) * np.cosh(k_grid * d_l2)) / denom)).astype(np.float64)
 
     def get_hamiltonian_term(self) -> npt.NDArray[np.float64]:
         """
@@ -270,14 +271,12 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         Returns:
             An array of the dimension of the k grid containing the analytical screened potential
         """
-        # Generate coulomb kernel
+        # Generate the grid associated with the Coulomb kernel
         k_grid = self.generate_coulomb_kernel()
-        # First, define the two layers. Since the layer argument contains one of the keys of
-        # the Excitons class, we need to convert it to the key of the SystemStructure class
+        # First, define the two layers. Since the layer argument contains one of the keys of
+        # the Excitons class, we need to convert it to the key of the SystemStructure class
         ref_layer = excitons_key_to_structure_key(self.exciton.split("_")[0])
         coupled_layer = excitons_key_to_structure_key(self.exciton.split("_")[1])
-        # Compute the in-plane momentum (k parallel)
-        eps = 1.
         # Compute the dielectric function.
         if ref_layer == coupled_layer:
             # Intra-layer case
@@ -288,12 +287,11 @@ class Effective2DCoulombPotential(HamiltonianTerm):
             # Inter-layer case
             eps = self.get_interlayer_dielectric_function(
                 ref_layer=ref_layer, coupled_layer=coupled_layer, k_grid=k_grid)
-        # The main diagonal of the Coulomb kernel would be 0, so we need to add a small value
-        q_c = np.float64(np.linalg.norm(
-            self.hamiltonian.grid.flat_grid()[1] - self.hamiltonian.grid.flat_grid()[0]))
+        # The main diagonal of the Coulomb kernel would be 0, so we need to add a small value
+        q_c = 2 * self.hamiltonian.grid.get_spacing()
         np.fill_diagonal(k_grid, q_c / 4.)
         # The 4pi factor comes from the conversion of the vacuum permittivity eps_0 in atomic units
-        w_q = (q_c / (2*np.pi))**2 * np.divide(4 * np.pi, (np.multiply(k_grid, eps)))
+        w_q = - (q_c / (2*np.pi))**2 * np.divide(4 * np.pi, np.multiply(k_grid, eps))
         return w_q.astype(np.float64)
 
     def generate_coulomb_kernel(self) -> npt.NDArray[np.float64]:
@@ -307,5 +305,5 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         # Generate x and y matrix
         kx_grid = np.add.outer(flat_grid[:,0], -flat_grid[:,0])
         ky_grid = np.add.outer(flat_grid[:,1], -flat_grid[:,1])
-        # Finally set up the actual grid on which to compute the matrices
-        return np.array(np.power(kx_grid, 2) + np.power(ky_grid, 2), dtype=np.float64)
+        # Finally, set up the actual grid on which to compute the matrices
+        return np.array(np.sqrt(np.power(kx_grid, 2) + np.power(ky_grid, 2)), dtype=np.float64)
