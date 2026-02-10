@@ -374,7 +374,7 @@ class MoirePotentialTerm(HamiltonianTerm):
         kgr_size: int = np.size(flat_k_grid, 0)
         number_of_excitonic_states = self.wannier_eigenvectors.get(self.exciton, np.array([])).shape[1]
         size: int = kgr_size * number_of_excitonic_states
-        moire_hamiltonian: npt.NDArray[np.complex128] = np.zeros((1 + size, 1 + size), dtype=np.complex128)
+        moire_hamiltonian: npt.NDArray[np.complex128] = np.zeros((size, size), dtype=np.complex128)
 
         # Define the layers involved. The reference layer is the one in which the hole is located,
         # while the coupled layer is the one in which the electron is located.

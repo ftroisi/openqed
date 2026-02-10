@@ -142,7 +142,7 @@ class MottWannierHamiltonian(MatterHamiltonian):
 
         return exciton_effective_mass
 
-    def get_hamiltonian(self) -> npt.NDArray[np.float64]:
+    def get_hamiltonian(self) -> npt.NDArray[np.complex128]:
         """This method builds the Mott-Wannier Hamiltonian for a couple of layers.
         See equation (13) of the supplementary information of
         https://pubs.acs.org/doi/10.1021/acs.nanolett.0c03019?fig=fig4&ref=pdf

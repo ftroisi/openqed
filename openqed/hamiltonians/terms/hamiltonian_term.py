@@ -17,6 +17,9 @@
 from abc import ABC, abstractmethod
 from openqed.hamiltonians.hamiltonian import Hamiltonian
 
+import numpy as np
+import numpy.typing as npt
+
 class HamiltonianTerm(ABC):
     """
     This class is the base abstract HamiltonianTerm class. All modules in the `hamiltonians/terms`
@@ -31,7 +34,7 @@ class HamiltonianTerm(ABC):
         self.hamiltonian: Hamiltonian = hamiltonian
 
     @abstractmethod
-    def get_hamiltonian_term(self):
+    def get_hamiltonian_term(self) -> npt.NDArray[np.float64 | np.complex128]:
         """
         This method generates the Hamiltonian term. It returns the Hamiltonian term as a matrix
         """

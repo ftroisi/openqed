@@ -143,7 +143,7 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
 
         return exciton_total_mass
 
-    def get_hamiltonian(self) -> npt.NDArray[np.float64]:
+    def get_hamiltonian(self) -> npt.NDArray[np.complex128]:
         """
         This method builds the Moiré Excitons Hamiltonian for a couple of layers.
         See Eq. 14 and 15 of the supplementary information of Ref. [1].
@@ -153,7 +153,7 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
         """
         # First compute mesh size
         mesh_size = np.size(self.grid.flat_grid(), 0)
-        hamiltonian: npt.NDArray[np.float64] = np.zeros((mesh_size, mesh_size), dtype=np.float64)
+        hamiltonian: npt.NDArray[np.complex128] = np.zeros((mesh_size, mesh_size), dtype=np.complex128)
         # Then, get the different terms
         for term, instance in self.terms_to_instances.items():
             if term == MoireExcitonHamiltonianTerms.FREE_EXCITON:
