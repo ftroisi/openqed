@@ -80,7 +80,8 @@ class FreeExcitonTerm(HamiltonianTerm):
         # First, get the kinetic term
         kinetic_term = self.kinetic_term.get_hamiltonian_term()
         # Create the array to return
-        hamiltonian = np.zeros((self.wannier_binding_energies[self.exciton].shape, kinetic_term.shape[0]), dtype=np.float64)
+        hamiltonian = np.zeros((kinetic_term.shape[0], kinetic_term.shape[0]), dtype=np.float64)
+        np.fill_diagonal(hamiltonian, self.band_gap[self.exciton] + self.wannier_binding_energies[self.exciton])
         # Then, sum the energy gap and the excitonic bound energy
-        hamiltonian = kinetic_term + self.band_gap[self.exciton] + self.wannier_binding_energies[self.exciton]
-        return cast(npt.NDArray[np.float64], hamiltonian)
+        hamiltonian += np.diag(kinetic_term)
+        return hamiltonian
