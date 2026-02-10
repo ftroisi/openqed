@@ -119,15 +119,18 @@ class MoirePotentialTerm(HamiltonianTerm):
         top_layer_lattice_vectors = \
             moire_parameters.layers_lattice_vectors.get("layer2").fit_lattice_vectors_to_grid(self.hamiltonian.grid)
         if moire_parameters.twist_angle is not None:
-            flat_k_grid = hamiltonian.grid.flat_grid()
             # Compute the discretized twist angle and use it to rotate the top layer lattice vectors
             discretized_twist_angle = self.get_discretized_twist_angle(
-                flat_k_grid, top_layer_lattice_vectors, moire_parameters.twist_angle)
-            rotated_top_layer_lattice_vectors =  np.array(
+                    top_layer_lattice_vectors, moire_parameters.twist_angle)
+            print(discretized_twist_angle)
+            rotated_top_layer_lattice_vectors = np.array(
                 [rotate_vector(discretized_twist_angle, v) for v in top_layer_lattice_vectors], dtype=np.float64)
             # Compute the moiré lattice vectors
-            self.moire_lattice_vectors: npt.NDArray =\
+            self.moire_lattice_vectors: npt.NDArray[np.float64] =\
                 bottom_layer_lattice_vectors - rotated_top_layer_lattice_vectors
+            print(bottom_layer_lattice_vectors)
+            print(rotated_top_layer_lattice_vectors)
+            print(self.moire_lattice_vectors)
             # Save the twist angle
             self.twist_angle = discretized_twist_angle
             # TODO: WARN THE USER!
@@ -153,44 +156,74 @@ class MoirePotentialTerm(HamiltonianTerm):
 
     def _get_real_space_moire_vectors(
             self, k_space_vectors: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
-        """
-        This method computes the real space Moiré vectors using equation 5 of the Supporting Info of Ref. [2].
-        """
-        rotated_k_space_vectors = np.array(
-            [rotate_vector(np.float64(90), v) for v in k_space_vectors], dtype=np.float64)
-        denominator: np.float64 = np.linalg.norm(
-            np.dot(k_space_vectors[0, :].T, rotated_k_space_vectors[1, :]), axis=0)
-        return ((2 * np.pi / denominator) * rotated_k_space_vectors).astype(npt.NDArray[np.float64])
+        """Compute real space Moiré lattice vectors from reciprocal space vectors.
 
-    def get_discretized_twist_angle(self,
-            flat_k_grid: npt.NDArray[np.float64], lattice_vectors: npt.NDArray[np.float64], twist_angle: np.float64
-        ) -> np.float64:
-        """
-        This method computes the discretized the twist angle after the rotation of the lattice vectors.
-        Since the grid is discrete, after the rotation of the vector there is no guarantee that the
-        rotated vector will be exactly on the grid, thus the real twist angle will be slightly different
-        from the one provided by the user.
+        This method transforms reciprocal space (k-space) Moiré lattice vectors to
+        real space using the duality relation between direct and reciprocal lattices.
+        The transformation follows Eq. 5 of the Supporting Info of Ref. [2].
+
+        For 2D lattices, the real space vectors are obtained by:
+        1. Rotating k-space vectors by 90 degrees (perpendicular in reciprocal space)
+        2. Scaling by 2π divided by the unit cell area in k-space
 
         Args:
-            flat_k_grid: The grid in k-space
-            lattice_vectors: The lattice vectors to rotate
-            twist_angle: The twist angle
+            k_space_vectors: Array of shape (2, 2) containing two reciprocal lattice
+                vectors as rows, where k_space_vectors[i] = [kx, ky] for vector i.
 
         Returns:
-            The discretized twist angle in degrees
+            Real space Moiré lattice vectors as array of shape (2, 2), where each
+            row is a real space vector [x, y].
+
+        Note:
+            The transformation uses the reciprocal lattice relation:
+            a_i · b_j = 2π delta_ij, where a_i are real space vectors and b_j are
+            reciprocal space vectors.
         """
-        # First, rotate the lattice vectors by the twist angle
-        first_rotated_lattice_vectors: npt.NDArray[np.float64] = np.array(
-                rotate_vector(twist_angle, lattice_vectors[0]), dtype=np.float64)
-        # Find the index of the k-point that is closest to the rotated top lattice vector
-        index_closest_k_point = self.hamiltonian.grid.get_point_index(first_rotated_lattice_vectors)
-        # Compute the discretized twist angle
-        denominator = np.linalg.norm(flat_k_grid[index_closest_k_point]) *\
-                                     np.linalg.norm(first_rotated_lattice_vectors)
-        discretized_twist_angle = np.float64(np.degrees(np.arccos(
-            np.dot(flat_k_grid[index_closest_k_point], first_rotated_lattice_vectors) / denominator)
-        ))
-        return discretized_twist_angle
+        # Rotate k-space vectors by 90° (counterclockwise)
+        rotated_k_space_vectors = np.array(
+                [rotate_vector(np.float64(90), v) for v in k_space_vectors],
+                dtype=np.float64
+        )
+        # Compute the area of the reciprocal space unit cell
+        # Area = |k1 × k2| = |k1_x * k2_y - k1_y * k2_x|
+        cross_product = (k_space_vectors[0, 0] * k_space_vectors[1, 1] -
+                         k_space_vectors[0, 1] * k_space_vectors[1, 0])
+        k_space_area = np.abs(cross_product)
+        # Real space vectors = (2π / k_space_area) * rotated_k_vectors
+        return (2 * np.pi / k_space_area) * rotated_k_space_vectors
+
+    def get_discretized_twist_angle(self,
+            lattice_vectors: npt.NDArray[np.float64], twist_angle: np.float64) -> np.float64:
+        """Compute the actual twist angle after discretization to the grid.
+
+        Since the grid is discrete, the rotated lattice vector must snap to the
+        nearest grid point. This method computes the actual twist angle that results
+        from this discretization, which may differ slightly from the requested angle.
+
+        Args:
+            lattice_vectors: The lattice vectors before rotation, shape (2, 2)
+            twist_angle: The requested twist angle in degrees
+
+        Returns:
+            The actual (discretized) twist angle in degrees between the original
+            and discretized rotated lattice vector.
+        """
+        # Original (unrotated) lattice vector
+        original_vector = lattice_vectors[0]
+        # Rotate the lattice vector by the requested twist angle
+        rotated_vector_ideal = np.array(
+                rotate_vector(twist_angle, original_vector), dtype=np.float64
+        )
+        # Find the closest grid point to the ideal rotated vector
+        index_closest_k_point = self.hamiltonian.grid.get_point_index(rotated_vector_ideal)
+        discretized_vector = self.hamiltonian.grid.flat_grid()[index_closest_k_point]
+        # Compute the angle between the original and discretized vectors
+        dot_product = np.dot(original_vector, discretized_vector)
+        norm_product = np.linalg.norm(original_vector) * np.linalg.norm(discretized_vector)
+        # Clamp to [-1, 1] to avoid numerical issues with arccos
+        cos_angle = np.clip(dot_product / norm_product, -1.0, 1.0)
+        # The discretized twist angle
+        return np.float64(np.degrees(np.arccos(cos_angle)))
 
     def get_moire_potential_coefficients(self,
             band: Literal['cb', 'vb'], layer: Literal['layer1', 'layer2']) -> npt.NDArray[np.complex128]:
@@ -202,31 +235,73 @@ class MoirePotentialTerm(HamiltonianTerm):
             A 1D array, with the size of the grid, representing the Moiré potential
         """
         flat_k_grid = self.hamiltonian.grid.flat_grid()
-        spacing: np.float64 = np.float64(np.linalg.norm(flat_k_grid[1] - flat_k_grid[0])) / 2
-        v_q = np.zeros((np.size(flat_k_grid, 0)), dtype=np.complex128)
-        # Generate an array of ones with length = number_of_kpt.
-        # This array will then be multiplied by either 1 (if the kpt on the grid corresponds to
-        # C_3^n(G_l - G_l')) or 0 (corresponding to the Kronecker delta)
-        deltas = np.ones((np.size(flat_k_grid, 0)), dtype=np.int64)
+        spacing: np.float64 = self.hamiltonian.grid.get_spacing()
         # Define the rotation angles
-        rotation_angles = [0]
+        rotation_angles = [0, 180]
         if self.moire_symmetry == "C4":
-            rotation_angles.append(120)
+            rotation_angles.extend([90, 270])
         elif self.moire_symmetry == "C6":
-            rotation_angles.extend([120, 240])
+            rotation_angles.extend([60, 120, 240, 300])
+
+        # Since the lattice vectors of the layers were shrunk, the Moire lattice vectors might be too small for the grid
+        # Find the optimal multiplier for the Moiré vectors. We need to use the same multiplier for all rotation angles
+        moire_magnitude = np.linalg.norm(self.moire_lattice_vectors[0])
+        min_multiplier = max(1, int(np.ceil(spacing / moire_magnitude)))
+        # Find the smallest multiplier that works for ALL rotation angles
+        multiplier = None
+        for n in range(min_multiplier, 100):
+            all_angles_valid = True
+            point_indexes = []
+            for angle in rotation_angles:
+                g_diff = np.array(
+                        [rotate_vector(np.float64(angle), v) for v in self.moire_lattice_vectors],
+                        dtype=np.float64
+                )
+                test_vector = n * g_diff[0, :]
+
+                try:
+                    # Check if this multiple can be found on the grid
+                    point_idx = self.hamiltonian.grid.get_point_index(test_vector)
+                    grid_point = flat_k_grid[point_idx]
+                    distance = np.linalg.norm(grid_point - test_vector)
+
+                    # Ensure it's reasonably close (within half grid spacing)
+                    if distance > spacing or point_idx in point_indexes:
+                        all_angles_valid = False
+                        break
+                    point_indexes.append(point_idx)
+                except (IndexError, ValueError):
+                    all_angles_valid = False
+                    break
+
+            if all_angles_valid and len(point_indexes) == len(rotation_angles):
+                multiplier = n
+                break
+
+        if multiplier is None:
+            raise ValueError(
+                    f"Could not find suitable multiplier for Moiré vectors with magnitude "
+                    f"{moire_magnitude:.2e}. Grid spacing: {spacing:.2e}. Consider refining the grid."
+            )
+
+        v_q = np.zeros((np.size(flat_k_grid, 0)), dtype=np.complex128)
         for angle in rotation_angles:
-            # First compute the correct rotation for g0_1 +/- g0_2
+            # Compute rotated vectors
             g_sum = np.array(
-                [rotate_vector(np.float64(angle), v) for v in self.sum_lattice_vectors], dtype=np.float64)
+                    [rotate_vector(np.float64(angle), v) for v in self.sum_lattice_vectors], dtype=np.float64)
             g_diff = np.array(
-                [rotate_vector(np.float64(angle), v) for v in self.moire_lattice_vectors], dtype=np.float64)
-            # Compute C_3^n(G_l + G_l')) * D_l
+                    [rotate_vector(np.float64(angle), v) for v in self.moire_lattice_vectors], dtype=np.float64)
+            # Scale by multiplier
+            g_diff_scaled = multiplier * g_diff
+            # Compute displacement term: C_3^n(G_l + G_l') · D_l
             displacement: np.float64 = np.sum(
-                [np.dot(g_sum[i, :], self.moire_lattice_vectors_real_space[i, :]) for i in range(g_sum.shape[0])])
-            # Then add the contribution to v_q
-            v_q += np.exp(1j * displacement / 2) * deltas * (
-                (np.abs(flat_k_grid[:, 0] - g_diff[0]) < spacing) *
-                (np.abs(flat_k_grid[:, 1] - g_diff[1]) < spacing))
+                    [np.dot(g_sum[i, :], self.moire_lattice_vectors_real_space[i, :])
+                     for i in range(g_sum.shape[0])]
+            )
+            # Find the grid point for the scaled Moiré vector
+            point = self.hamiltonian.grid.get_point_index(g_diff_scaled[0, :])
+            v_q[point] += np.exp(1j * displacement / 2)
+
         # Finally, return the Moiré potential
         sigma = 1.
         if band == "cb":
@@ -242,7 +317,7 @@ class MoirePotentialTerm(HamiltonianTerm):
             except ValueError as exc:
                 raise ValueError(f"Invalid alpha or beta for {layer}") from exc
         prefactor: np.complex128 = alpha + np.exp(2j * np.pi * sigma / 3) * beta
-        return cast(npt.NDArray[np.complex128], prefactor * v_q)
+        return prefactor * v_q
 
     def get_form_factor(
             self, psi, q_indexes: list[int] | npt.NDArray[np.int64]) -> tuple[list[np.complex128], list[np.complex128]]:
@@ -319,7 +394,8 @@ class MoirePotentialTerm(HamiltonianTerm):
         # Determine the indexes of the q vectors for which the Moiré potential is not zero. We expect 6 values
         moire_idx_valence_band = np.where(np.abs(moire_potential_valence_band[reference_layer]) > 0)[0]
         moire_idx_conduction_band = np.where(np.abs(moire_potential_conduction_band[coupled_layer]) > 0)[0]
-        assert moire_idx_valence_band == 6 and moire_idx_conduction_band == 6
+        print(self.hamiltonian.grid.flat_grid()[moire_idx_valence_band])
+        assert len(moire_idx_valence_band) == 6 and len(moire_idx_conduction_band) == 6
 
         # 3 of these value yield diagonals in the lower triangular part of the matrix, the other 3 in the upper
         # triangular. Therefore, we can keep only three values (as the Hamiltonian is hermitian). Depending on the
@@ -352,17 +428,14 @@ class MoirePotentialTerm(HamiltonianTerm):
                 q = flat_k_grid[q_i, :]
                 for k in range(kgr_size):
                     # Define the Q + q grid and get the index of the corresponding element.
-                    # Note that this will yield either one or zero elements
-                    # (if the Moiré potential is zero in that point)
+                    # Note that this will yield either one or zero elements (if the potential is zero in that point)
                     Q_plus_q = flat_k_grid[k, :] + q
-                    idx = np.where(np.linalg.norm(flat_k_grid - Q_plus_q, axis=1) < 1e-5)[0]
-                    if len(idx) == 0:
+                    idx = self.hamiltonian.grid.get_point_index(Q_plus_q)
+                    if idx == -1:
                         continue
-                    if len(idx) > 1:
-                        raise ValueError("The index of the Q + q grid is not unique")
                     # Fill diag in the lower and upper triangular part
                     i_h: int = i * kgr_size + k
-                    j_h: int = i * kgr_size + int(idx)
+                    j_h: int = i * kgr_size + idx
                     if i_h > j_h:  # Element is in lower triangular part
                         moire_hamiltonian[i_h, j_h] = np.conj(moire_coefficients[j])
                         moire_hamiltonian[j_h, i_h] = moire_coefficients[j]

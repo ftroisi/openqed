@@ -185,4 +185,6 @@ class Grid(ABC):
         # If more than one point is found, raise an error
         if index.shape[0] > 1:
             raise ValueError(f"More than one point found in the grid: {index}")
+        if index.shape[0] == 0:
+            return -1
         return int(index[0])

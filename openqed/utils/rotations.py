@@ -47,4 +47,4 @@ def rotate_vector(theta: np.float64, vector: npt.NDArray) -> npt.NDArray:
         rot_matrix = get_2d_rotation_matrix(theta)
     else:
         raise NotImplementedError("Only 2D vectors are supported")
-    return rot_matrix.dot(vector.reshape(vector.shape[0], 1))
+    return rot_matrix.dot(vector)
