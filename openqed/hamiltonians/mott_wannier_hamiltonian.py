@@ -14,7 +14,7 @@
 
 """This module contains the Mott-Wannier Hamiltonian class"""
 
-from typing import get_type_hints, cast
+from typing import get_type_hints, cast, Dict, Literal
 from enum import Enum
 from collections import OrderedDict
 
@@ -162,5 +162,8 @@ class MottWannierHamiltonian(MatterHamiltonian):
 
         return hamiltonian
 
-    def get_interaction_hamiltonian(self) -> npt.NDArray[np.float64]:
+    def get_interaction_hamiltonian(self,
+                                    light_momentum: npt.NDArray[np.float64],
+                                    light_polarization: Literal['x', 'y', 'z', 'xy', 'xz', 'yz', '+', '-']
+        ) -> Dict[Literal['x', 'y', 'z'], npt.NDArray[np.float64 | np.complex128]]:
         raise NotImplementedError()

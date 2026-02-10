@@ -210,7 +210,7 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         Return:
             epsilon_ll(k): the value of the dielectric function on all the k grid
         """
-        # First, define some useful quantitites
+        # First, define some useful quantities
         eps_1, eps_2, eps_r, eps_l1, eps_l2 = \
             self._get_dielectric_constants(ref_layer=ref_layer,coupled_layer=coupled_layer)
         eps_l12: np.float64 = eps_l1 * eps_l2
@@ -288,11 +288,10 @@ class Effective2DCoulombPotential(HamiltonianTerm):
             eps = self.get_interlayer_dielectric_function(
                 ref_layer=ref_layer, coupled_layer=coupled_layer, k_grid=k_grid)
         # The main diagonal of the Coulomb kernel would be 0, so we need to add a small value
-        q_c = np.float64(np.linalg.norm(
-            self.hamiltonian.grid.flat_grid()[1] - self.hamiltonian.grid.flat_grid()[0]))
+        q_c = 2 * self.hamiltonian.grid.get_spacing()
         np.fill_diagonal(k_grid, q_c / 4.)
         # The 4pi factor comes from the conversion of the vacuum permittivity eps_0 in atomic units
-        w_q = (q_c / (2*np.pi))**2 * np.divide(4 * np.pi, (np.multiply(k_grid, eps)))
+        w_q = - (q_c / (2*np.pi))**2 * np.divide(4 * np.pi, np.multiply(k_grid, eps))
         return w_q.astype(np.float64)
 
     def generate_coulomb_kernel(self) -> npt.NDArray[np.float64]:
@@ -307,4 +306,4 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         kx_grid = np.add.outer(flat_grid[:,0], -flat_grid[:,0])
         ky_grid = np.add.outer(flat_grid[:,1], -flat_grid[:,1])
         # Finally, set up the actual grid on which to compute the matrices
-        return np.array(np.power(kx_grid, 2) + np.power(ky_grid, 2), dtype=np.float64)
+        return np.array(np.sqrt(np.power(kx_grid, 2) + np.power(ky_grid, 2)), dtype=np.float64)
