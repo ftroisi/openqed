@@ -17,7 +17,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 import numpy.typing as npt
-from openqed.grid.grid import GridType
+from openqed.grid.grid import GridType, Grid
 
 class UnitCell(ABC):
     """This class is the abstract UnitCell class. All modules in the `unit_cells` folder"""
@@ -41,3 +41,36 @@ class UnitCell(ABC):
         Returns:
             The lattice vectors of the unit cell in the desired space.
         """
+        pass
+
+    def fit_lattice_vectors_to_grid(self, grid: Grid) -> npt.NDArray[np.float64]:
+        """Fit the lattice vectors to stay within the grid limits.
+
+        This method scales the unit cell lattice vectors so that their magnitude equals
+        the radius of the largest circle inscribed in the grid. This ensures that lattice
+        vectors remain within grid boundaries even after rotation, which is essential for
+        operations like constructing Moiré superlattices or computing twisted bilayer
+        structures.
+
+        The scaling preserves the direction and relative proportions of all lattice vectors
+        while ensuring they fit commensurate with the computational grid.
+
+        Args:
+            grid: The computational grid (momentum or real space) to which the lattice
+                vectors should be fitted. The grid must be 2-dimensional.
+
+        Returns:
+            Scaled lattice vectors as an array of shape (n_vectors, 2), where each vector
+            has magnitude equal to the inscribed circle radius of the grid. The returned
+            vectors are in the same space (momentum/real) as the input grid.
+
+        Note:
+            This method scales all lattice vectors uniformly by the ratio of the inscribed
+            circle radius to the magnitude of the first lattice vector. For rotation-invariant
+            operations, this ensures that any rotated lattice vector remains inside the grid.
+        """
+        radius = grid.get_max_inscribed_circle_radius()
+        lattice_vectors = self.get_lattice_vectors(space=grid.grid_type)
+        scaling_factor = radius / np.sqrt(np.sum(lattice_vectors[0] ** 2))
+        return lattice_vectors * scaling_factor
+

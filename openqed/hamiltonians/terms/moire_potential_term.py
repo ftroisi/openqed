@@ -14,7 +14,7 @@
 
 """This module contains the Moiré potential class"""
 from dataclasses import dataclass
-from typing import Literal, cast
+from typing import Literal, cast, Dict
 import numpy as np
 import numpy.typing as npt
 
@@ -23,6 +23,7 @@ from openqed.grid.real_space_grid import RealSpaceGrid
 from openqed.hamiltonians.hamiltonian import Hamiltonian
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.types.bilayer_excitons import BilayerStructure, BilayerExcitons, excitons_key_to_structure_key
+from openqed.unit_cells import UnitCell
 
 from openqed.utils.rotations import rotate_vector
 
@@ -50,7 +51,7 @@ class MoirePotentialParameters:
         If the symmetry is "C4", the terms with angles 0 and 120 are considered. If the symmetry is "C6",
         the terms with angles 0, 120, and 240 are considered (complete Moiré pattern).
     """
-    layers_lattice_vectors: BilayerStructure
+    layers_lattice_vectors: Dict[Literal["layer1", "layer2"], UnitCell]
     twist_angle: np.float64 | None
     moire_lattice_vectors: npt.NDArray[np.float64] | None
     moire_prefactor_alpha_valence_band: BilayerStructure
@@ -113,8 +114,10 @@ class MoirePotentialTerm(HamiltonianTerm):
         self.exciton = next(k for k, v in wannier_eigenvectors.items() if v is not None)
 
         # Compute the Moiré lattice vectors if the twist angle is provided
-        bottom_layer_lattice_vectors = moire_parameters.layers_lattice_vectors.get("layer1")
-        top_layer_lattice_vectors = moire_parameters.layers_lattice_vectors.get("layer2")
+        bottom_layer_lattice_vectors = \
+            moire_parameters.layers_lattice_vectors.get("layer1").fit_lattice_vectors_to_grid(self.hamiltonian.grid)
+        top_layer_lattice_vectors = \
+            moire_parameters.layers_lattice_vectors.get("layer2").fit_lattice_vectors_to_grid(self.hamiltonian.grid)
         if moire_parameters.twist_angle is not None:
             flat_k_grid = hamiltonian.grid.flat_grid()
             # Compute the discretized twist angle and use it to rotate the top layer lattice vectors
@@ -157,7 +160,7 @@ class MoirePotentialTerm(HamiltonianTerm):
             [rotate_vector(np.float64(90), v) for v in k_space_vectors], dtype=np.float64)
         denominator: np.float64 = np.linalg.norm(
             np.dot(k_space_vectors[0, :].T, rotated_k_space_vectors[1, :]), axis=0)
-        return cast( npt.NDArray[np.float64], (2 * np.pi / denominator) * rotated_k_space_vectors)
+        return ((2 * np.pi / denominator) * rotated_k_space_vectors).astype(npt.NDArray[np.float64])
 
     def get_discretized_twist_angle(self,
             flat_k_grid: npt.NDArray[np.float64], lattice_vectors: npt.NDArray[np.float64], twist_angle: np.float64

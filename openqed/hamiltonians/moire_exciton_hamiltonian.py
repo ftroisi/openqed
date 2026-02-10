@@ -87,6 +87,8 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
         if len(wannier_states) != 1:
             raise ValueError("Only one exciton type is supported")
         self.exciton = next(k for k, v in wannier_states.items() if v is not None)
+        if self.wannier_states.get(self.exciton, np.array([])).ndim != 2:
+            raise ValueError("The Wannier states must be 2D arrays with shape (n_k_points, n_exciton_states)")
         self.number_of_excitonic_states = wannier_states.get(self.exciton, np.array([])).shape[1]
         # Save the moire matrix elements
         self.matrix_elements = moire_matrix_elements

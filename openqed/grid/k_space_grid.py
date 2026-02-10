@@ -57,7 +57,7 @@ class KSpaceGrid(Grid):
         space: list[npt.NDArray] = []
         for dim in self.spacing.keys():
             start, end = self.boundaries[dim]
-            space.append(np.arange(start, end, self.spacing[dim]))
+            space.append(np.arange(start, end + self.spacing[dim] / 2, self.spacing[dim]))
         # Then build a mesh, flatten it (meaning that the mesh becomes a 1D
         # array) and finally stack the x-y-z-arrays
         if self.dimensions == 1:
@@ -120,7 +120,7 @@ class KSpaceGrid(Grid):
         Args:
             real_space_lattice_parameter: the lattice constant in the real space (in atomic units).
             k_space_lattice_parameter: lattice constant in the reciprocal lattice (in atomic units).
-            cache_result: If True, the flate grid will be stored in memory. This will overwrite the
+            cache_result: If True, the flat grid will be stored in memory. This will overwrite the
                 previous grid if it was already computed
 
         Returns:

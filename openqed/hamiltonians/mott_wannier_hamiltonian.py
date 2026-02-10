@@ -59,7 +59,7 @@ class MottWannierHamiltonian(MatterHamiltonian):
                 on this grid. TODO: Add RealSpaceGrid support
             electron_effective_mass: The effective mass of the electrons in the bilayer structure.
             hole_effective_mass: The effective mass of the holes in the bilayer structure.
-            thicknesses: The thicknesses of the layers in the bilayer structure.
+            thicknesses: The thicknesses of the layers in the bilayer structure. Their values must be in atomic units.
             dielectric_constants: The dielectric constants of the layers in the bilayer structure.
         """
         # First, initialize the base Hamiltonian class
