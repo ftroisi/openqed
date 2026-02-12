@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This module contains the ExagonalUnitCell class"""
+"""This module contains the HexagonalUnitCell class"""
 
 import numpy as np
 import numpy.typing as npt
