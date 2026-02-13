@@ -36,7 +36,9 @@ class Hamiltonian(ABC):
             terms: a list of strings representing the terms of the Hamiltonian.
             grid: The grid object to use. The Hamiltonian will be represented on this grid.
         """
-        self.name: str = name
+        self.name: str = name.strip()
+        if len(self.name) == 0:
+            raise ValueError("The name of the Hamiltonian cannot be empty or contain only whitespace.")
         self.terms: list[str] = terms
         self.grid: Grid = grid
 
