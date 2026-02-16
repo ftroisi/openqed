@@ -24,21 +24,18 @@ Classes and utilities to handle the Hamiltonians in OpenQED.
 
     Hamiltonian
     MatterHamiltonian
-    LightMatterHamiltonian
     MottWannierHamiltonian
     MoireExcitonHamiltonian
 """
 
 from .hamiltonian import Hamiltonian
 from .matter_hamiltonian import MatterHamiltonian
-from .light_matter_hamiltonian import LightMatterHamiltonian
 from .mott_wannier_hamiltonian import MottWannierHamiltonian
 from .moire_exciton_hamiltonian import MoireExcitonHamiltonian
 
 __all__: list[str] = [
     "Hamiltonian",
     "MatterHamiltonian",
-    "LightMatterHamiltonian",
     "MottWannierHamiltonian",
     "MoireExcitonHamiltonian"
 ]
