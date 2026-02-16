@@ -55,7 +55,7 @@ def mode_polarization_to_vector(
         # Normalize the vector
         polarization = np.array([polarization[0], polarization[1], 0], dtype=np.complex128)
         norm = np.linalg.norm(polarization)
-        if norm == 0:
+        if np.isclose(norm, 0):
             raise ValueError("The polarization vector cannot be the zero vector")
         return polarization / norm
 

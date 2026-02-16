@@ -15,7 +15,7 @@
 """
 Hamiltonian types module for OpenQED.
 
-.. currentmodule:: openqed.types
+.. currentmodule:: openqed.hamiltonians.types
 
 Classes and types to handle the Terms that can appear in any Hamiltonian in OpenQED.
 
