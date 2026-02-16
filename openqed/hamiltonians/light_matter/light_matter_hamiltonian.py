@@ -1,4 +1,4 @@
-# Copyright 2025 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This module contains the Mott-Wannier Hamiltonian class"""
+"""This module contains the Light-Matter Hamiltonian base class"""
 
 from abc import ABC
 from enum import Enum
@@ -34,9 +34,9 @@ class LightMatterHamiltonian(Hamiltonian, ABC):
     matter Hamiltonian with the radiation field.
     """
     def __init__(self,
-                *,
                 name: str,
                 terms: list[str],
+                *,
                 cavity_parameters: CavityParameters,
                 matter_hamiltonian: MatterHamiltonian
         ) -> None:

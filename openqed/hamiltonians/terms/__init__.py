@@ -26,6 +26,7 @@ Classes and utilities to handle the Terms that can appear in any Hamiltonian in 
     FreeExcitonTerm
     KineticTerm
     MoirePotentialTerm
+    MatterHamiltonianTerm
 """
 
 from .hamiltonian_term import HamiltonianTerm
@@ -34,10 +35,13 @@ from .free_exciton_term import FreeExcitonTerm
 from .kinetic_term import KineticTerm
 from .moire_potential_term import MoirePotentialTerm
 
+from .matter_hamiltonian_term import MatterHamiltonianTerm
+
 __all__: list[str] = [
     "HamiltonianTerm",
     "Effective2DCoulombPotential",
     "FreeExcitonTerm",
     "KineticTerm",
-    "MoirePotentialTerm"
+    "MoirePotentialTerm",
+    "MatterHamiltonianTerm"
 ]

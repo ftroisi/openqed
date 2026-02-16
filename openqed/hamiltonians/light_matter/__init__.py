@@ -16,7 +16,7 @@
 LightMatterHamiltonians module for OpenQED.
 These classes represent the various Hamiltonians that can be used to describe light-matter systems in OpenQED.
 
-.. currentmodule:: openqed.hamiltonians
+.. currentmodule:: openqed.hamiltonians.light_matter
 
 Classes and utilities to handle the LightMatterHamiltonians in OpenQED.
 
@@ -26,8 +26,9 @@ Classes and utilities to handle the LightMatterHamiltonians in OpenQED.
     LightMatterHamiltonian
 """
 
-from .light_matter_hamiltonian import LightMatterHamiltonian
+from .light_matter_hamiltonian import LightMatterHamiltonian, LightMatterHamiltonianTerms
 
 __all__: list[str] = [
-    "LightMatterHamiltonian"
+    "LightMatterHamiltonian",
+    "LightMatterHamiltonianTerms"
 ]
