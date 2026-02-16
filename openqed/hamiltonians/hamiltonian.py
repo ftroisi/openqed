@@ -19,28 +19,22 @@ import os
 import numpy as np
 import scipy.sparse.linalg as ssl
 import numpy.typing as npt
-from openqed.grid.grid import Grid
 
 class Hamiltonian(ABC):
     """This class is the base abstract Hamiltonian class. All modules in the `hamiltonians` folder
     and subfolders must inherit from this class.
     """
-    def __init__(self,
-                name: str,
-                terms: list[str],
-                grid: Grid) -> None:
+    def __init__(self, name: str, terms: list[str]) -> None:
         """Initializes the Hamiltonian
 
         Args:
             name: The name of the Hamiltonian.
             terms: a list of strings representing the terms of the Hamiltonian.
-            grid: The grid object to use. The Hamiltonian will be represented on this grid.
         """
         self.name: str = name.strip()
         if len(self.name) == 0:
             raise ValueError("The name of the Hamiltonian cannot be empty or contain only whitespace.")
         self.terms: list[str] = terms
-        self.grid: Grid = grid
 
     @abstractmethod
     def get_hamiltonian(self) -> npt.NDArray[np.float64] | npt.NDArray[np.complex128]:
