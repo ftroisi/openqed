@@ -14,7 +14,7 @@
 
 """This module contains the Light-Matter Hamiltonian base class"""
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from enum import Enum
 
 import numpy as np
@@ -77,10 +77,11 @@ class LightMatterHamiltonian(Hamiltonian, ABC):
         self.modes_couplings = cavity_parameters.modes_couplings
         if (cavity_parameters.modes_parallel_momenta is None or cavity_parameters.modes_parallel_momenta.ndim != 2 or
             cavity_parameters.modes_parallel_momenta.shape[0] != self.number_of_effective_modes or
-            cavity_parameters.modes_parallel_momenta.shape[1] != 3):
+            cavity_parameters.modes_parallel_momenta.shape[1] != matter_hamiltonian.grid.dimensions):
             raise ValueError(
-                "The modes parallel momenta array must be a 2D array of shape (number of effective modes, 3). Expected "
-                + f"shape: ({self.number_of_effective_modes}, 3), got {cavity_parameters.modes_parallel_momenta.shape}")
+                "The modes parallel momenta array must be a 2D array: (number of effective modes, grid dimension)." +
+                f"Expected shape: ({self.number_of_effective_modes}, {matter_hamiltonian.grid.dimensions}), " +
+                f"got {cavity_parameters.modes_parallel_momenta.shape}")
         self.modes_parallel_momenta = cavity_parameters.modes_parallel_momenta
         if cavity_parameters.modes_polarization is None:
             raise ValueError("The polarization of the modes must be specified")
@@ -94,5 +95,3 @@ class LightMatterHamiltonian(Hamiltonian, ABC):
             if self.matter_hamiltonian.grid.get_point_index(mode_momentum) == -1:
                 raise ValueError(f"The momentum of the photonic mode {mode_momentum}" +
                                  " is not compatible with the grid of the matter Hamiltonian")
-
-

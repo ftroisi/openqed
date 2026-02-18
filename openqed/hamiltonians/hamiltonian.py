@@ -43,6 +43,11 @@ class Hamiltonian(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_hamiltonian_size(self) -> int:
+        """This method returns the size of the Hamiltonian matrix"""
+        pass
+
     @classmethod
     def diagonalize_hamiltonian(cls,
                                 hamiltonian: npt.NDArray[np.float64] | npt.NDArray[np.complex128],
