@@ -19,14 +19,14 @@ import numpy.typing as npt
 import scipy.linalg as spl
 
 from .hamiltonian_term import HamiltonianTerm
-from openqed.hamiltonians import MatterHamiltonian
+from openqed.hamiltonians import Hamiltonian
 
 class MatterHamiltonianTerm(HamiltonianTerm):
     """
     This class is a HamiltonianTerm that couples matter Hamiltonians to LightMatterHamiltonians. It is used to
     generate the term of the Hamiltonian that couples the matter Hamiltonian to the LightMatterHamiltonian.
     """
-    def __init__(self, hamiltonian: MatterHamiltonian) -> None:
+    def __init__(self, hamiltonian: Hamiltonian) -> None:
         """Initialize the MatterHamiltonianTerm
 
         Args:

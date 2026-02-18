@@ -152,8 +152,8 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
             The Hamiltonian that describes the Moiré excitons
         """
         # First compute mesh size
-        mesh_size = np.size(self.grid.flat_grid(), 0)
-        hamiltonian: npt.NDArray[np.complex128] = np.zeros((mesh_size, mesh_size), dtype=np.complex128)
+        hamiltonian_size = self.get_hamiltonian_size()
+        hamiltonian: npt.NDArray[np.complex128] = np.zeros((hamiltonian_size, hamiltonian_size), dtype=np.complex128)
         # Then, get the different terms
         for term, instance in self.terms_to_instances.items():
             if term == MoireExcitonHamiltonianTerms.FREE_EXCITON:
@@ -162,6 +162,13 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
                 hamiltonian += instance.get_hamiltonian_term()
 
         return hamiltonian
+
+    def get_hamiltonian_size(self) -> int:
+        """This method returns the size of the Moiré excitons Hamiltonian matrix"""
+        mesh_size = np.size(self.grid.flat_grid(), 0)
+        number_of_excitonic_states = self.number_of_excitonic_states
+        hamiltonian_size = mesh_size * number_of_excitonic_states
+        return hamiltonian_size
 
     def get_interaction_hamiltonian(self,
                                     light_momentum: npt.NDArray[np.float64],

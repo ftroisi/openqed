@@ -162,6 +162,10 @@ class MottWannierHamiltonian(MatterHamiltonian):
 
         return hamiltonian
 
+    def get_hamiltonian_size(self) -> int:
+        """This method returns the size of the MottWannier Hamiltonian matrix"""
+        return np.size(self.grid.flat_grid(), 0)
+
     def get_interaction_hamiltonian(self,
                                     light_momentum: npt.NDArray[np.float64],
                                     light_polarization: Literal['x', 'y', 'z', 'xy', 'xz', 'yz', '+', '-']
