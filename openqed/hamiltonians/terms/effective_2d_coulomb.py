@@ -18,7 +18,7 @@ from typing import get_type_hints
 import numpy as np
 import numpy.typing as npt
 from openqed.hamiltonians.terms import HamiltonianTerm
-from openqed.hamiltonians.hamiltonian import Hamiltonian
+from openqed.hamiltonians import MatterHamiltonian
 from openqed.hamiltonians.types import (BilayerStructure, BilayerExcitons, excitons_key_to_structure_key)
 
 class Effective2DCoulombPotential(HamiltonianTerm):
@@ -35,7 +35,7 @@ class Effective2DCoulombPotential(HamiltonianTerm):
         for this kind of system.
     """
     def __init__(self,
-                hamiltonian: Hamiltonian,
+                hamiltonian: MatterHamiltonian,
                 exciton: str,
                 *,
                 thicknesses: BilayerStructure,

@@ -27,14 +27,16 @@ from openqed.grid import KSpaceGrid
 from openqed.unit_cells import HexagonalUnitCell
 
 from openqed.hamiltonians import MottWannierHamiltonian, MoireExcitonHamiltonian, Hamiltonian
+from openqed.hamiltonians.light_matter.pauli_fierz_hamiltonian import PauliFierzHamiltonian
+from openqed.hamiltonians.light_matter.light_matter_hamiltonian import LightMatterHamiltonianTerms
 from openqed.hamiltonians.moire_exciton_hamiltonian import MoireExcitonHamiltonianTerms, MoireExcitonsMomentumMatrixElements
 from openqed.hamiltonians.mott_wannier_hamiltonian import MottWannierHamiltonianTerms
 from openqed.hamiltonians.terms.moire_potential_term import MoirePotentialParameters
 
-from openqed.hamiltonians.types import BilayerExcitons, BilayerStructure
+from openqed.hamiltonians.types import BilayerExcitons, BilayerStructure, CavityParameters, ModePolarization
 
 HA_TO_EV = 27.2114079527
-spacing = np.float64(0.001)
+spacing = np.float64(0.0015)
 grid_boundaries = np.float64(0.03)
 grid = KSpaceGrid(
         spacing={'x': spacing, 'y': spacing},
@@ -141,7 +143,10 @@ matrix_elements = MoireExcitonsMomentumMatrixElements(
 )
 
 moire_excitons = MoireExcitonHamiltonian(
-    terms=[MoireExcitonHamiltonianTerms.FREE_EXCITON.value, MoireExcitonHamiltonianTerms.MOIRE_POTENTIAL.value],
+    terms=[
+        MoireExcitonHamiltonianTerms.FREE_EXCITON.value,
+        MoireExcitonHamiltonianTerms.MOIRE_POTENTIAL.value
+    ],
     grid=grid,
     wannier_states=wannier_states,
     wannier_binding_energies=wannier_binding_energies,
@@ -151,7 +156,24 @@ moire_excitons = MoireExcitonHamiltonian(
     electron_effective_mass=electron_effective_mass,
     hole_effective_mass=hole_effective_mass,
 )
-moire_excitons_hamiltonian = moire_excitons.get_hamiltonian()
-print(f"h_mat shape: {np.shape(moire_excitons_hamiltonian)}")
-print(moire_excitons_hamiltonian)
+print(f"h_mat size: {moire_excitons.get_hamiltonian_size()}")
+
+# Now create light matter coupling
+cavity_parameters = CavityParameters(
+    number_of_effective_modes=2,
+    maximum_mode_occupation=2,
+    modes_energies=np.array([0.01, 0.02], dtype=np.float64),
+    modes_couplings=np.array([0.01, 0.01], dtype=np.float64),
+    modes_parallel_momenta=np.array([[0., 0.],[0., 0.]], dtype=np.float64),
+    modes_polarization=ModePolarization.LINEAR_X
+)
+lm = PauliFierzHamiltonian(
+        terms=[
+            LightMatterHamiltonianTerms.UNCOUPLED_MATTER.value,
+            LightMatterHamiltonianTerms.UNCOUPLED_LIGHT.value
+        ],
+        cavity_parameters=cavity_parameters,
+        matter_hamiltonian=moire_excitons
+)
+lm.get_hamiltonian()
 

@@ -15,7 +15,7 @@
 """
 Hamiltonian types module for OpenQED.
 
-.. currentmodule:: openqed.types
+.. currentmodule:: openqed.hamiltonians.types
 
 Classes and types to handle the Terms that can appear in any Hamiltonian in OpenQED.
 
@@ -26,14 +26,23 @@ Classes and types to handle the Terms that can appear in any Hamiltonian in Open
     BilayerExcitons
     excitons_key_to_structure_key
     structure_key_to_exciton_key
+    ModePolarization
+    mode_polarization_to_vector
+    CavityParameters
 """
 
 from .bilayer_excitons import (BilayerStructure,
                                BilayerExcitons,
                                excitons_key_to_structure_key,
                                structure_key_to_exciton_key)
+from .cavity import ModePolarization, CavityParameters, mode_polarization_to_vector
 
-__all__: list[str] = ["BilayerStructure",
-                      "BilayerExcitons",
-                      "excitons_key_to_structure_key",
-                      "structure_key_to_exciton_key"]
+__all__: list[str] = [
+    "BilayerStructure",
+    "BilayerExcitons",
+    "excitons_key_to_structure_key",
+    "structure_key_to_exciton_key",
+    "ModePolarization",
+    "mode_polarization_to_vector",
+    "CavityParameters"
+]

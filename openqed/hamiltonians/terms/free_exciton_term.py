@@ -14,13 +14,12 @@
 
 """This module contains the FreeExcitonTerm class"""
 
-from typing import cast
 import numpy as np
 import numpy.typing as npt
 
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.terms.kinetic_term import KineticTerm
-from openqed.hamiltonians.hamiltonian import Hamiltonian
+from openqed.hamiltonians import MatterHamiltonian
 from openqed.grid.real_space_grid import RealSpaceGrid
 
 from openqed.hamiltonians.types.bilayer_excitons import BilayerExcitons
@@ -35,7 +34,7 @@ class FreeExcitonTerm(HamiltonianTerm):
             https://pubs.acs.org/doi/10.1021/acs.nanolett.0c03019
     """
     def __init__(self,
-                 hamiltonian: Hamiltonian,
+                 hamiltonian: MatterHamiltonian,
                  *,
                  kinetic_term: KineticTerm,
                  wannier_binding_energies: BilayerExcitons,
@@ -72,16 +71,16 @@ class FreeExcitonTerm(HamiltonianTerm):
     def get_hamiltonian_term(self) -> npt.NDArray[np.float64]:
         """
         This method generates the FreeExciton term. The formula is the following:
-        :math:`\\frac{\\hbar^2 * k^2}{2 * m} + E_{gap} + E_{B}`
+        :math:`\\frac{\\h_{bar}^2 * k^2}{2 * m} + E_{gap} + E_{B}`
 
         Returns:
             The FreeExciton term as a 1D array
         """
-        # First, get the kinetic term
-        kinetic_term = self.kinetic_term.get_hamiltonian_term()
         # Create the array to return
-        hamiltonian = np.zeros((kinetic_term.shape[0], kinetic_term.shape[0]), dtype=np.float64)
-        np.fill_diagonal(hamiltonian, self.band_gap[self.exciton] + self.wannier_binding_energies[self.exciton])
+        hamiltonian = np.zeros(self.hamiltonian.get_hamiltonian_size(), dtype=np.float64)
+        # First, add the energy gap and the excitonic bound energy
+        hamiltonian += \
+            (self.band_gap[self.exciton] + self.wannier_binding_energies[self.exciton]) * np.ones_like(hamiltonian)
         # Then, sum the energy gap and the excitonic bound energy
-        hamiltonian += np.diag(kinetic_term)
+        hamiltonian += self.kinetic_term.get_hamiltonian_term()
         return hamiltonian

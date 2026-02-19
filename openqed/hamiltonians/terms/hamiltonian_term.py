@@ -38,4 +38,4 @@ class HamiltonianTerm(ABC):
         """
         This method generates the Hamiltonian term. It returns the Hamiltonian term as a matrix
         """
-        raise NotImplementedError()
+        pass

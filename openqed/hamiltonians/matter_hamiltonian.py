@@ -20,6 +20,7 @@ from typing import Literal, Dict
 import numpy as np
 import numpy.typing as npt
 
+from openqed.grid.grid import Grid
 from openqed.hamiltonians.hamiltonian import Hamiltonian
 
 class MatterHamiltonian(Hamiltonian, ABC):
@@ -27,6 +28,17 @@ class MatterHamiltonian(Hamiltonian, ABC):
     This class is the base abstract MatterHamiltonian class.
     All classes representing single particle matter systems must inherit from this class.
     """
+    def __init__(self, name: str, terms: list[str], grid: Grid) -> None:
+        """Initializes the MatterHamiltonian
+
+        Args:
+            name: The name of the hamiltonian.
+            terms: a list of strings representing the terms of the Hamiltonian.
+            grid: The grid object to use. The Hamiltonian will be represented on this grid.
+        """
+        super().__init__(name, terms)
+        self.grid: Grid = grid
+
 
     @abstractmethod
     def get_interaction_hamiltonian(self,
