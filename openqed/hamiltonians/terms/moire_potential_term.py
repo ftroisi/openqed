@@ -25,7 +25,7 @@ from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.types.bilayer_excitons import BilayerStructure, BilayerExcitons, excitons_key_to_structure_key
 from openqed.unit_cells import UnitCell
 
-from openqed.utils.rotations import rotate_vector
+from openqed.utils import rotate_vector
 
 @dataclass
 class MoirePotentialParameters:
