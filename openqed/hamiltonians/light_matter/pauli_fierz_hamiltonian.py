@@ -63,7 +63,10 @@ class PauliFierzHamiltonian(LightMatterHamiltonian):
             if term == LightMatterHamiltonianTerms.UNCOUPLED_LIGHT:
                 hamiltonian += np.diag(instance.get_hamiltonian_term())
             elif term == LightMatterHamiltonianTerms.UNCOUPLED_MATTER:
-                hamiltonian += instance.get_hamiltonian_term()
+                hamiltonian += np.kron(
+                    instance.get_hamiltonian_term(),
+                    np.identity((self.maximum_mode_occupation + 1)**self.number_of_effective_modes, dtype=np.complex128)
+                )
 
         return hamiltonian
 
