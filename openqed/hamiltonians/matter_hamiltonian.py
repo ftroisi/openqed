@@ -22,7 +22,6 @@ import numpy.typing as npt
 
 from openqed.grid.grid import Grid
 from openqed.hamiltonians.hamiltonian import Hamiltonian
-from openqed.hamiltonians.terms import MatterHamiltonianTerm
 
 class MatterHamiltonian(Hamiltonian, ABC):
     """
@@ -70,10 +69,3 @@ class MatterHamiltonian(Hamiltonian, ABC):
             The values are 3D arrays of shape: (number of modes, interaction matrix size, interaction matrix size).
         """
         pass
-
-    def to_hamiltonian_term(self) -> MatterHamiltonianTerm:
-        """
-        This method converts the MatterHamiltonian to a HamiltonianTerm object, which can be used in the
-        LightMatterHamiltonian classes.
-        """
-        return MatterHamiltonianTerm(self)

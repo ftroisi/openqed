@@ -18,7 +18,7 @@ import numpy as np
 import numpy.typing as npt
 
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
-from openqed.hamiltonians.hamiltonian import Hamiltonian
+from openqed.hamiltonians import MatterHamiltonian
 from openqed.grid.real_space_grid import RealSpaceGrid
 
 class KineticTerm(HamiltonianTerm):
@@ -29,7 +29,7 @@ class KineticTerm(HamiltonianTerm):
     - For a real-space grid, the kinetic term is: :math:`-\\frac{\\hbar^2}{2 * m} \\nabla^2`
     """
     def __init__(self,
-                 hamiltonian: Hamiltonian,
+                 hamiltonian: MatterHamiltonian,
                  *,
                  mass: np.float64) -> None:
         """Initialize the KineticTerm class

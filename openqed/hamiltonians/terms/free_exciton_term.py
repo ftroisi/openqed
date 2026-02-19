@@ -19,7 +19,7 @@ import numpy.typing as npt
 
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.terms.kinetic_term import KineticTerm
-from openqed.hamiltonians.hamiltonian import Hamiltonian
+from openqed.hamiltonians import MatterHamiltonian
 from openqed.grid.real_space_grid import RealSpaceGrid
 
 from openqed.hamiltonians.types.bilayer_excitons import BilayerExcitons
@@ -34,7 +34,7 @@ class FreeExcitonTerm(HamiltonianTerm):
             https://pubs.acs.org/doi/10.1021/acs.nanolett.0c03019
     """
     def __init__(self,
-                 hamiltonian: Hamiltonian,
+                 hamiltonian: MatterHamiltonian,
                  *,
                  kinetic_term: KineticTerm,
                  wannier_binding_energies: BilayerExcitons,

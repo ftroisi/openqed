@@ -20,7 +20,7 @@ import numpy.typing as npt
 
 from openqed.grid.real_space_grid import RealSpaceGrid
 
-from openqed.hamiltonians.hamiltonian import Hamiltonian
+from openqed.hamiltonians import MatterHamiltonian
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.types.bilayer_excitons import BilayerStructure, BilayerExcitons, excitons_key_to_structure_key
 from openqed.unit_cells import UnitCell
@@ -72,7 +72,7 @@ class MoirePotentialTerm(HamiltonianTerm):
             https://www.nature.com/articles/s41699-023-00382-4
     """
     def __init__(self,
-                hamiltonian: Hamiltonian,
+                hamiltonian: MatterHamiltonian,
                  *,
                 wannier_eigenvectors: BilayerExcitons,
                 wannier_eigenvalues: BilayerExcitons,

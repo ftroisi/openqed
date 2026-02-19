@@ -23,7 +23,7 @@ from . import LightMatterHamiltonian
 from openqed.hamiltonians import MatterHamiltonian
 from openqed.hamiltonians.types import CavityParameters
 from openqed.hamiltonians.light_matter import LightMatterHamiltonianTerms
-from openqed.hamiltonians.terms import HamiltonianTerm
+from openqed.hamiltonians.terms import HamiltonianTerm, MatterHamiltonianTerm
 from openqed.hamiltonians.terms.cavity_modes_energy_term import CavityModesEnergyTerm
 
 class PauliFierzHamiltonian(LightMatterHamiltonian):
@@ -51,7 +51,7 @@ class PauliFierzHamiltonian(LightMatterHamiltonian):
         self.terms_to_instances: OrderedDict[LightMatterHamiltonianTerms, HamiltonianTerm] = OrderedDict()
         for term in [LightMatterHamiltonianTerms(t) for t in terms]:
             if term == LightMatterHamiltonianTerms.UNCOUPLED_MATTER:
-                self.terms_to_instances[term] = matter_hamiltonian.to_hamiltonian_term()
+                self.terms_to_instances[term] = MatterHamiltonianTerm.from_matter_hamiltonian(matter_hamiltonian)
             if term == LightMatterHamiltonianTerms.UNCOUPLED_LIGHT:
                 self.terms_to_instances[term] = CavityModesEnergyTerm(self)
 
