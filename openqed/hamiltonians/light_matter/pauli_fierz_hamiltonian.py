@@ -24,7 +24,7 @@ from openqed.hamiltonians import MatterHamiltonian
 from openqed.hamiltonians.types import CavityParameters
 from openqed.hamiltonians.light_matter import LightMatterHamiltonianTerms
 from openqed.hamiltonians.terms import HamiltonianTerm, MatterHamiltonianTerm
-from openqed.hamiltonians.terms.cavity_modes_energy_term import CavityModesEnergyTerm
+from openqed.hamiltonians.light_matter.terms.cavity_modes_energy_term import CavityModesEnergyTerm
 
 class PauliFierzHamiltonian(LightMatterHamiltonian):
     """
