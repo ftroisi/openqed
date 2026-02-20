@@ -14,11 +14,13 @@
 
 """This module contains the BilinearCouplingTerm class"""
 
+import gc
 import numpy as np
 import numpy.typing as npt
 
 from openqed.hamiltonians.terms import HamiltonianTerm
 from openqed.hamiltonians.light_matter import LightMatterHamiltonian
+from openqed.hamiltonians.types import polarization_vector_to_directions, direction_to_index
 
 class BilinearCouplingTerm(HamiltonianTerm):
     """
@@ -58,32 +60,50 @@ class BilinearCouplingTerm(HamiltonianTerm):
         """
         This method generates the bilinear coupling Hamiltonian term. It returns the Hamiltonian term as a matrix
         """
+        polarization_directions = polarization_vector_to_directions(self.hamiltonian.modes_polarization)
         # Include the vacuum fock state
         number_of_fock_states = self.hamiltonian.maximum_mode_occupation + 1
-        # Build the P dot A matrix (same dimension as H QED)
+        # Build the P dot A matrix
         mat_dim: int = self.hamiltonian.get_hamiltonian_size()
-        h_pa: npt.NDArray[np.complex128] = np.zeros((mat_dim, mat_dim), dtype=np.complex128)
+        hamiltonian_term: npt.NDArray[np.complex128] = np.zeros((mat_dim, mat_dim), dtype=np.complex128)
         for mode in range(self.hamiltonian.number_of_effective_modes):
-            # Build the interaction Hamiltonian for this mode
+            # First, get the interaction coming from the matter hamiltonian (also accounting for light polarization).
+            # This is a matrix of shape (matter_hamiltonian_dimension, matter_hamiltonian_dimension)
             h_int = self.hamiltonian.matter_hamiltonian.get_interaction_hamiltonian(
-                    self.hamiltonian.modes_parallel_momenta[mode], self.hamiltonian.modes_polarization)
-            matter_interaction = np.asarray(h_int.get("x")*self.hamiltonian.modes_polarization[0] + \
-                                 h_int.get("y")*self.hamiltonian.modes_polarization[1], dtype=np.complex128)
-            base_block_size: int = number_of_fock_states ** mode
-            a_0: np.float64 = np.float64(self.hamiltonian.maximum_mode_occupation)
-            # 1. First, define the base
-            # Build the coefficient for the Fock state: it will look like [1. sqrt(2) sqrt(3) ...]
-            fock_states_coefficients: list[float] = []
-            for ph in range(0, self.hamiltonian.maximum_mode_occupation - 1):
-                fock_states_coefficients.append(np.sqrt(ph + 1) * np.ones(base_block_size))
-            base = -a_0 * np.ones(self.hamiltonian.maximum_mode_occupation * base_block_size, dtype=np.complex128) * np.concatenate(fock_states_coefficients)
+                    self.hamiltonian.modes_parallel_momenta[mode], polarization_directions)
+            matter_interaction = None
+            for key in h_int.keys():
+                if matter_interaction is None:
+                    matter_interaction = h_int[key] * self.hamiltonian.modes_polarization[direction_to_index(key)]
+                else:
+                    matter_interaction += h_int[key] * self.hamiltonian.modes_polarization[direction_to_index(key)]
+            matter_interaction_hermitian_conjugate = matter_interaction.conj().T  # Get a view, no copy
+            del h_int
+
+            # Then, build the base photon hamiltonian for this mode. This is a vector of length
+            # (number_of_fock_states ** (mode+1)) which accounts for the light matter coupling and the Fock states
+            # coefficients. The base is built in such a way that it can be repeated to get the correct dimensions.
+            preceding_modes_dimension: int = number_of_fock_states ** mode
+            a_0 = self.hamiltonian.modes_couplings[mode]
+            fock_states_coefficients = np.sqrt(np.arange(1, number_of_fock_states, dtype=np.float64))
+            base = -a_0 * np.repeat(fock_states_coefficients, preceding_modes_dimension).astype(np.complex128)
+            del fock_states_coefficients
+
+            identity = np.identity(
+                    number_of_fock_states ** (self.hamiltonian.number_of_effective_modes - (mode + 1)),
+                    dtype=np.complex128)
+            # The bilinear coupling term has two contributions: the one coming from the matter interaction (above
+            # the main diagonal, representing the photonic annihilation operator) and the one coming from its hermitian
+            # conjugate (below the main diagonal, representing the photonic creation operator).
             for i in range(2):
-                # 2. Place the base on the correct diagonal
-                h_temp: npt.NDArray[np.complex128] = np.diag(base, k=(-1) ** i * base_block_size)
-                h_temp = np.asarray(
-                        np.kron(np.identity(number_of_fock_states ** (self.hamiltonian.number_of_effective_modes - (mode + 1)), dtype=np.complex128), h_temp), dtype=np.complex128)
-                h_temp = np.asarray(np.kron(h_temp, matter_interaction), dtype=np.complex128) \
-                    if i == 0 else np.asarray(np.kron(h_temp, np.asarray(matter_interaction.conj().T, dtype=np.complex128)), dtype=np.complex128)
-                h_pa += h_temp
-        # Return the result
-        return h_pa
+                # Build the Fock matrix, which represents the light matter coupling and the fock states coefficients
+                fock_coupling_op = np.kron(identity, np.diag(base, k=(-1) ** i * preceding_modes_dimension))
+                # Tensor product with the interaction coming from the matter hamiltonian
+                hamiltonian_term += np.kron(fock_coupling_op,
+                                            matter_interaction if i == 0 else matter_interaction_hermitian_conjugate)
+                del fock_coupling_op
+            # Clean up the variables to free memory
+            del identity, matter_interaction, matter_interaction_hermitian_conjugate, base
+            gc.collect()
+        return hamiltonian_term
+

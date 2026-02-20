@@ -26,7 +26,9 @@ Classes and utilities to handle the Terms that can couple Light and Matter.
 """
 
 from .cavity_modes_energy_term import CavityModesEnergyTerm
+from .bilinear_coupling_term import BilinearCouplingTerm
 
 __all__: list[str] = [
-    "CavityModesEnergyTerm"
+    "CavityModesEnergyTerm",
+    "BilinearCouplingTerm"
 ]

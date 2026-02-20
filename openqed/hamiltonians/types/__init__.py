@@ -35,7 +35,11 @@ from .bilayer_excitons import (BilayerStructure,
                                BilayerExcitons,
                                excitons_key_to_structure_key,
                                structure_key_to_exciton_key)
-from .cavity import ModePolarization, CavityParameters, mode_polarization_to_vector
+from .cavity import (ModePolarization,
+                     CavityParameters,
+                     mode_polarization_to_vector,
+                     polarization_vector_to_directions,
+                     direction_to_index)
 
 __all__: list[str] = [
     "BilayerStructure",
@@ -44,5 +48,7 @@ __all__: list[str] = [
     "structure_key_to_exciton_key",
     "ModePolarization",
     "mode_polarization_to_vector",
+    "polarization_vector_to_directions",
+    "direction_to_index",
     "CavityParameters"
 ]

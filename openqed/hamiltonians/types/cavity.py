@@ -30,6 +30,16 @@ class ModePolarization(Enum):
     CHIRAL_PLUS = "+"
     CHIRAL_MINUS = "-"
 
+def direction_to_index(direction: str) -> int:
+    """This method converts a direction string to an index"""
+    if direction == "x":
+        return 0
+    if direction == "y":
+        return 1
+    if direction == "z":
+        return 2
+    raise ValueError("Unsupported direction")
+
 def mode_polarization_to_vector(
         polarization: ModePolarization | tuple[np.complex128, np.complex128]) -> npt.NDArray[np.complex128]:
     """This method converts the mode polarization to a vector"""
@@ -57,7 +67,54 @@ def mode_polarization_to_vector(
         norm = np.linalg.norm(polarization)
         if np.isclose(norm, 0):
             raise ValueError("The polarization vector cannot be the zero vector")
-        return polarization / norm
+        return (polarization / norm).astype(np.complex128)
+
+def polarization_vector_to_directions(polarization: npt.NDArray[np.complex128]) -> ModePolarization:
+    """
+    Converts a 3D polarization vector to a ModePolarization enum value.
+
+    Args:
+        polarization: A 3-element complex array representing the polarization vector.
+                      Must be non-zero and have a valid combination of non-zero components.
+
+    Returns:
+        The corresponding ModePolarization enum value.
+
+    Raises:
+        ValueError: If the polarization vector is zero, has an invalid shape,
+                    or does not map to a known ModePolarization.
+    """
+    if polarization.ndim != 1 or polarization.shape[0] != 3:
+        raise ValueError(
+            f"Polarization vector must be a 1D array of length 3, "
+            f"got shape {polarization.shape}."
+        )
+    if not np.isclose(np.linalg.norm(polarization), 1.0):
+        raise ValueError(
+            f"Polarization vector must be normalized (unit norm), "
+            f"got norm {np.linalg.norm(polarization):.6f}."
+        )
+    pol = ""
+    if not np.isclose(polarization[0], 0):
+        pol += "x"
+    if not np.isclose(polarization[1], 0):
+        pol += "y"
+    if not np.isclose(polarization[2], 0):
+        pol += "z"
+    if not pol:
+        raise ValueError(
+            "Polarization vector is effectively zero after tolerance check. "
+            "Cannot determine polarization direction."
+        )
+    try:
+        return ModePolarization(pol)
+    except ValueError:
+        raise ValueError(
+            f"Polarization vector {polarization} maps to direction string '{pol}', "
+            f"which does not correspond to any ModePolarization member. "
+            f"Valid members are: {[m.value for m in ModePolarization]}."
+        )
+
 
 @dataclass
 class CavityParameters:
