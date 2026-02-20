@@ -170,7 +170,8 @@ cavity_parameters = CavityParameters(
 lm = PauliFierzHamiltonian(
         terms=[
             LightMatterHamiltonianTerms.UNCOUPLED_MATTER.value,
-            LightMatterHamiltonianTerms.UNCOUPLED_LIGHT.value
+            LightMatterHamiltonianTerms.UNCOUPLED_LIGHT.value,
+            LightMatterHamiltonianTerms.BILINEAR.value,
         ],
         cavity_parameters=cavity_parameters,
         matter_hamiltonian=moire_excitons

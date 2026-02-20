@@ -59,7 +59,7 @@ class CavityModesEnergyTerm(HamiltonianTerm):
 
     def get_hamiltonian_term(self):
         """
-        This method generates the uncouples light Hamiltonian term. It returns the Hamiltonian term as a matrix
+        This method generates the uncoupled light Hamiltonian term. It returns the Hamiltonian term as a matrix
         """
         # Include the vacuum fock state
         number_of_fock_states = self.hamiltonian.maximum_mode_occupation + 1
@@ -83,4 +83,4 @@ class CavityModesEnergyTerm(HamiltonianTerm):
             hamiltonian_term_diagonal += np.kron(
                 light_diagonal, np.ones(self.hamiltonian.matter_hamiltonian.get_hamiltonian_size() + 1, dtype=np.float64))
         # Return the result
-        return np.diag(hamiltonian_term_diagonal)
+        return hamiltonian_term_diagonal

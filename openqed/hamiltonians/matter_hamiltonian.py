@@ -22,6 +22,8 @@ import numpy.typing as npt
 
 from openqed.grid.grid import Grid
 from openqed.hamiltonians.hamiltonian import Hamiltonian
+from openqed.hamiltonians.types import ModePolarization
+
 
 class MatterHamiltonian(Hamiltonian, ABC):
     """
@@ -43,16 +45,16 @@ class MatterHamiltonian(Hamiltonian, ABC):
     @abstractmethod
     def get_interaction_hamiltonian(self,
                                     light_momentum: npt.NDArray[np.float64],
-                                    light_polarization: Literal['x', 'y', 'z', 'xy', 'xz', 'yz', '+', '-']
+                                    light_polarization: ModePolarization
         ) -> Dict[Literal['x', 'y', 'z'], npt.NDArray[np.float64 | np.complex128]]:
         """
         This method generates the interaction hamiltonian for this class. In a light-matter system,
         this term describes the interaction between the matter system and the radiation field
-        (:math:`\\p \\cdot \\mathbf{A}`).
+        (:math:`\\mathbf{p} \\cdot \\mathbf{A}`).
 
         Args:
-            light_momentum: The momentum of the light field. It is a 2D array of shape:
-                (number of modes, direction) representing the momentum in the x, y and z directions for each mode.
+            light_momentum: The momentum of the light field. It is a 1D array of shape:
+                where each entry represents the momentum in the x, y or z directions for each mode.
             light_polarization: The polarization of the light field. It can be one of the following:
                 - 'x': linear polarization along the x direction
                 - 'y': linear polarization along the y direction
@@ -65,7 +67,7 @@ class MatterHamiltonian(Hamiltonian, ABC):
 
         Returns:
             A dictionary with keys 'x', 'y' and 'z' representing the interaction hamiltonian in the x, y and z
-            polarization directions.
-            The values are 3D arrays of shape: (number of modes, interaction matrix size, interaction matrix size).
+            polarization directions for a certain mode.
+            The values are 2D arrays of shape: (interaction matrix size, interaction matrix size).
         """
         pass

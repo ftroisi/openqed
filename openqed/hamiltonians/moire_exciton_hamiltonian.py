@@ -14,7 +14,7 @@
 
 """This module contains the Moiré Hamiltonian class"""
 
-from typing import Literal, Dict
+from typing import List, Literal, Dict
 from enum import Enum
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -29,6 +29,7 @@ from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.terms.kinetic_term import KineticTerm
 from openqed.hamiltonians.terms.free_exciton_term import FreeExcitonTerm
 from openqed.hamiltonians.terms.moire_potential_term import MoirePotentialTerm, MoirePotentialParameters
+from openqed.hamiltonians.types import ModePolarization
 
 from openqed.hamiltonians.types.bilayer_excitons import BilayerExcitons, BilayerStructure, structure_key_to_exciton_key
 
@@ -86,7 +87,7 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
         self.wannier_states = wannier_states
         if len(wannier_states) != 1:
             raise ValueError("Only one exciton type is supported")
-        self.exciton = next(k for k, v in wannier_states.items() if v is not None)
+        self.exciton: str = next(k for k, v in wannier_states.items() if v is not None)
         if self.wannier_states.get(self.exciton, np.array([])).ndim != 2:
             raise ValueError("The Wannier states must be 2D arrays with shape (n_k_points, n_exciton_states)")
         self.number_of_excitonic_states = wannier_states.get(self.exciton, np.array([])).shape[1]
@@ -172,61 +173,62 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
 
     def get_interaction_hamiltonian(self,
                                     light_momentum: npt.NDArray[np.float64],
-                                    light_polarization: Literal['x', 'y', 'z', 'xy', 'xz', 'yz', '+', '-']
+                                    light_polarization: ModePolarization
         ) -> Dict[Literal['x', 'y', 'z'], npt.NDArray[np.float64 | np.complex128]]:
+        if light_momentum.ndim != 1 or light_momentum.shape[0] != self.grid.dimensions:
+            raise ValueError("The light momentum must be a 1D array with the dimensions of the grid")
+        # Compute some grid parameters
         kgr_size: int = np.size(self.grid.flat_grid(), 0)
-        size: int = kgr_size * self.number_of_excitonic_states
+        size: int = self.get_hamiltonian_size()
+        spacing = self.grid.get_spacing()
         # Interaction Hamiltonian dimensions ('1 + ' is for the polaritonic GS):
-        # (number of modes, 1 + number_of_excitonic_states * grid_size, 1 + number_of_excitonic_states * grid_size)
+        # (1 + number_of_excitonic_states * grid_size, 1 + number_of_excitonic_states * grid_size)
         hamiltonian = dict()
-        light_polarization = light_polarization.replace('+', 'xy').replace('-', 'xy')
-        for pol in light_polarization:
-            hamiltonian[pol] = np.zeros((light_momentum.shape[0], 1 + size, 1 + size), dtype=np.complex128)
+        dipole_0n: Dict[str, List[np.complex128]] = dict()
+        for pol in light_polarization.value:
+            hamiltonian[pol] = np.zeros((1 + size, 1 + size), dtype=np.complex128)
+            dipole_0n[pol] = []
 
         # Calculating Matrix Elements Envelope Functions \Psi_0 -> \Psi_n
         # the only non-zero matrix elements are the ones at Q=0
-        # ----------------------------------------------------------------
-        dipole_0n = dict()
+
         # Loop over the number of excitons we want to include
         for i in range(self.number_of_excitonic_states):
             # Evaluate f for transitions from GS to n: see eq 7 and 8 of supporting info of
             # https://pubs.acs.org/doi/full/10.1021/acs.nanolett.9b00183
             # => Sum on all k point for a specific exciton: (1/n_kpt) * sum_k(wfn(k, exc))
-            f_0 = (1 / kgr_size) * np.sum(self.wannier_states[self.exciton][:, i])
-            for pol in light_polarization:
-                dipole_0n[pol] = (self.matrix_elements[pol][self.exciton] * f_0)
+            f_0 = (1 / kgr_size) * np.sum(self.wannier_states.get(self.exciton)[:, i])
+            for pol in light_polarization.value:
+                dipole_0n[pol].append(getattr(self.matrix_elements, pol).get(self.exciton) * f_0)
 
-        # Compute the spacing between two k points
-        spacing = self.grid.get_spacing()
-        for mode_idx in range(light_momentum.shape[0]):
-            q_ph = light_momentum[mode_idx]
-            # Find the index of the photon momentum in the grid
-            q0_idx = self.grid.get_point_index(q_ph) + 1
-            # 0->n transition
-            for pol in light_polarization:
-                hamiltonian[pol][mode_idx][0, q0_idx::kgr_size] = np.array(dipole_0n[pol][:]).conj()
-                hamiltonian[pol][mode_idx][q0_idx::kgr_size, 0] = np.array(dipole_0n[pol][:])
-            # Now account for moire-like effect of finite q photon
-            if not np.isclose(np.linalg.norm(q_ph), 0):
-                # ! Note well, this will only work for the first layer
-                form_factor_vv, form_factor_cc = \
-                    self.get_form_factor(self.wannier_states[self.exciton][:, 0], [q0_idx])
-                # See equation 9 of the supporting info of the paper
-                # https://pubs.acs.org/doi/full/10.1021/acs.nanolett.9b00183
-                finite_q_me: npt.NDArray[np.complex128] = \
-                    np.abs(q_ph) * (form_factor_cc[0] + form_factor_vv[0]) / self.eff_mass[self.exciton]
-                for k in range(kgr_size):
-                    # Define the Q + q_ph grid and get the index of the corresponding element.
-                    Q_plus_q = self.grid.flat_grid()[k, :] + q_ph
-                    idx = np.where(np.linalg.norm(self.grid.flat_grid() - Q_plus_q, axis=1) < spacing)[0]
-                    if len(idx) == 0:
-                        continue
-                    if len(idx) > 1:
-                        raise ValueError("The index of the Q + q grid is not unique")
-                    # +1 because the first element is the GS
-                    i: int = 1 + k
-                    j: int = 1 + idx[0]
-                    me: npt.NDArray[np.complex128] = np.conj(finite_q_me) if i > j else finite_q_me
-                    for pol in light_polarization:
-                        hamiltonian[pol][mode_idx][i, j] = me[0 if pol == 'x' else 1]
+        # Find the index of the photon momentum in the grid
+        q0_idx = self.grid.get_point_index(light_momentum) + 1
+        # Polaritonic ground state to n-th polariton transition
+        for pol in light_polarization.value:
+            hamiltonian[pol][0, q0_idx::kgr_size] = np.array(dipole_0n[pol][:]).conj()
+            hamiltonian[pol][q0_idx::kgr_size, 0] = np.array(dipole_0n[pol][:])
+        # Now account for moire-like effect of finite q photon
+        if not np.isclose(np.linalg.norm(light_momentum), 0):
+            # ! Note well, this will only work for the first layer
+            form_factor_vv, form_factor_cc = \
+                self.get_form_factor(self.wannier_states[self.exciton][:, 0], [q0_idx])
+            # See equation 9 of the supporting info of the paper
+            # https://pubs.acs.org/doi/full/10.1021/acs.nanolett.9b00183
+            finite_q_me: npt.NDArray[np.complex128] = \
+                np.abs(light_momentum) * (form_factor_cc[0] + form_factor_vv[0]) / self.eff_mass[self.exciton]
+            for k in range(kgr_size):
+                # Define the Q + q_ph grid and get the index of the corresponding element.
+                Q_plus_q = self.grid.flat_grid()[k, :] + light_momentum
+                idx = np.where(np.linalg.norm(self.grid.flat_grid() - Q_plus_q, axis=1) < spacing)[0]
+                if len(idx) == 0:
+                    continue
+                if len(idx) > 1:
+                    raise ValueError("The index of the Q + q grid is not unique")
+                # +1 because the first element is the GS
+                i: int = 1 + k
+                j: int = 1 + idx[0]
+                me: npt.NDArray[np.complex128] = np.conj(finite_q_me) if i > j else finite_q_me
+                for pol in light_polarization.value:
+                    hamiltonian[pol][i, j] = me[0 if pol == 'x' else 1]
+
         return hamiltonian

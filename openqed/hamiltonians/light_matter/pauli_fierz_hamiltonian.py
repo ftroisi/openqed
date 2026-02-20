@@ -18,13 +18,14 @@ from collections import OrderedDict
 
 import numpy as np
 from numpy import typing as npt
+import scipy.linalg as spl
 
 from . import LightMatterHamiltonian
 from openqed.hamiltonians import MatterHamiltonian
 from openqed.hamiltonians.types import CavityParameters
 from openqed.hamiltonians.light_matter import LightMatterHamiltonianTerms
 from openqed.hamiltonians.terms import HamiltonianTerm, MatterHamiltonianTerm
-from openqed.hamiltonians.terms.cavity_modes_energy_term import CavityModesEnergyTerm
+from openqed.hamiltonians.light_matter.terms import CavityModesEnergyTerm, BilinearCouplingTerm
 
 class PauliFierzHamiltonian(LightMatterHamiltonian):
     """
@@ -52,8 +53,10 @@ class PauliFierzHamiltonian(LightMatterHamiltonian):
         for term in [LightMatterHamiltonianTerms(t) for t in terms]:
             if term == LightMatterHamiltonianTerms.UNCOUPLED_MATTER:
                 self.terms_to_instances[term] = MatterHamiltonianTerm.from_matter_hamiltonian(matter_hamiltonian)
-            if term == LightMatterHamiltonianTerms.UNCOUPLED_LIGHT:
+            elif term == LightMatterHamiltonianTerms.UNCOUPLED_LIGHT:
                 self.terms_to_instances[term] = CavityModesEnergyTerm(self)
+            elif term == LightMatterHamiltonianTerms.BILINEAR:
+                self.terms_to_instances[term] = BilinearCouplingTerm(self)
 
     def get_hamiltonian(self) -> npt.NDArray[np.float64] | npt.NDArray[np.complex128]:
         hamiltonian_size = self.get_hamiltonian_size()
@@ -67,7 +70,11 @@ class PauliFierzHamiltonian(LightMatterHamiltonian):
                     instance.get_hamiltonian_term(),
                     np.identity((self.maximum_mode_occupation + 1)**self.number_of_effective_modes, dtype=np.complex128)
                 )
+            elif term == LightMatterHamiltonianTerms.BILINEAR:
+                hamiltonian += instance.get_hamiltonian_term()
 
+        if not spl.ishermitian(hamiltonian, atol=1e-12):
+            raise ValueError(f"The matter hamiltonian {self.name} is not Hermitian")
         return hamiltonian
 
     def get_hamiltonian_size(self) -> int:
