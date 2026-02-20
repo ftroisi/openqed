@@ -83,4 +83,4 @@ class CavityModesEnergyTerm(HamiltonianTerm):
             hamiltonian_term_diagonal += np.kron(
                 light_diagonal, np.ones(self.hamiltonian.matter_hamiltonian.get_hamiltonian_size() + 1, dtype=np.float64))
         # Return the result
-        return np.diag(hamiltonian_term_diagonal)
+        return hamiltonian_term_diagonal
