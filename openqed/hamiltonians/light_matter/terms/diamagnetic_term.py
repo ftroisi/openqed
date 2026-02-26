@@ -55,6 +55,8 @@ class DiamagneticTerm(HamiltonianTerm):
         super().__init__(hamiltonian=hamiltonian)
         # Override the type of the hamiltonian attribute to be more specific
         self.hamiltonian: LightMatterHamiltonian = hamiltonian
+        if self.hamiltonian.maximum_mode_occupation < 2:
+            raise ValueError("The diamagnetic term requires at least 2 Fock states per mode to be represented.")
 
     def get_hamiltonian_term(self) -> npt.NDArray[np.float64]:
         """
