@@ -172,6 +172,7 @@ lm = PauliFierzHamiltonian(
             LightMatterHamiltonianTerms.UNCOUPLED_MATTER.value,
             LightMatterHamiltonianTerms.UNCOUPLED_LIGHT.value,
             LightMatterHamiltonianTerms.BILINEAR.value,
+            LightMatterHamiltonianTerms.DIAMAGNETIC.value
         ],
         cavity_parameters=cavity_parameters,
         matter_hamiltonian=moire_excitons

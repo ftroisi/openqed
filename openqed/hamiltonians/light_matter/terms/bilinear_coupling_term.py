@@ -55,6 +55,8 @@ class BilinearCouplingTerm(HamiltonianTerm):
         super().__init__(hamiltonian=hamiltonian)
         # Override the type of the hamiltonian attribute to be more specific
         self.hamiltonian: LightMatterHamiltonian = hamiltonian
+        if self.hamiltonian.maximum_mode_occupation < 1:
+            raise ValueError("The bilinear coupling term requires at least 1 Fock state per mode to be represented.")
 
     def get_hamiltonian_term(self) -> npt.NDArray[np.float64 | np.complex128]:
         """
