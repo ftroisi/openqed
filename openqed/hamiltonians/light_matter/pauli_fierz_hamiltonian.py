@@ -25,7 +25,7 @@ from openqed.hamiltonians import MatterHamiltonian
 from openqed.hamiltonians.types import CavityParameters
 from openqed.hamiltonians.light_matter import LightMatterHamiltonianTerms
 from openqed.hamiltonians.terms import HamiltonianTerm, MatterHamiltonianTerm
-from openqed.hamiltonians.light_matter.terms import CavityModesEnergyTerm, BilinearCouplingTerm
+from openqed.hamiltonians.light_matter.terms import CavityModesEnergyTerm, BilinearCouplingTerm, DiamagneticTerm
 
 class PauliFierzHamiltonian(LightMatterHamiltonian):
     """
@@ -57,6 +57,8 @@ class PauliFierzHamiltonian(LightMatterHamiltonian):
                 self.terms_to_instances[term] = CavityModesEnergyTerm(self)
             elif term == LightMatterHamiltonianTerms.BILINEAR:
                 self.terms_to_instances[term] = BilinearCouplingTerm(self)
+            elif term == LightMatterHamiltonianTerms.DIAMAGNETIC:
+                self.terms_to_instances[term] = DiamagneticTerm(self)
 
     def get_hamiltonian(self) -> npt.NDArray[np.float64] | npt.NDArray[np.complex128]:
         hamiltonian_size = self.get_hamiltonian_size()
@@ -71,6 +73,8 @@ class PauliFierzHamiltonian(LightMatterHamiltonian):
                     np.identity((self.maximum_mode_occupation + 1)**self.number_of_effective_modes, dtype=np.complex128)
                 )
             elif term == LightMatterHamiltonianTerms.BILINEAR:
+                hamiltonian += instance.get_hamiltonian_term()
+            elif term == LightMatterHamiltonianTerms.DIAMAGNETIC:
                 hamiltonian += instance.get_hamiltonian_term()
 
         if not spl.ishermitian(hamiltonian, atol=1e-12):

@@ -23,12 +23,16 @@ Classes and utilities to handle the Terms that can couple Light and Matter.
     :toctree: generated/
 
     CavityModesEnergyTerm
+    BilinearCouplingTerm
+    DiamagneticTerm
 """
 
 from .cavity_modes_energy_term import CavityModesEnergyTerm
 from .bilinear_coupling_term import BilinearCouplingTerm
+from .diamagnetic_term import DiamagneticTerm
 
 __all__: list[str] = [
     "CavityModesEnergyTerm",
-    "BilinearCouplingTerm"
+    "BilinearCouplingTerm",
+    "DiamagneticTerm"
 ]

@@ -14,6 +14,8 @@
 
 """This module contains the DiamagneticTerm class"""
 
+import gc
+
 import numpy as np
 import numpy.typing as npt
 
@@ -54,53 +56,69 @@ class DiamagneticTerm(HamiltonianTerm):
         # Override the type of the hamiltonian attribute to be more specific
         self.hamiltonian: LightMatterHamiltonian = hamiltonian
 
-    def get_hamiltonian_term(self) -> npt.NDArray[np.float64 | np.complex128]:
+    def get_hamiltonian_term(self) -> npt.NDArray[np.float64]:
         """
-        This method generates the bilinear coupling Hamiltonian term. It returns the Hamiltonian term as a matrix
+        Generates the diamagnetic Hamiltonian term (diagonal A^2 + off-diagonal A^2).
+        Returns a dense NumPy array.
         """
-        polarization_directions = polarization_vector_to_directions(self.hamiltonian.modes_polarization)
-        # Include the vacuum fock state
-        number_of_fock_states = self.hamiltonian.maximum_mode_occupation + 1
-        # Build the P dot A matrix
+        number_of_fock_states: int = self.hamiltonian.maximum_mode_occupation + 1
+        matter_dim: int = self.hamiltonian.matter_hamiltonian.get_hamiltonian_size() + 1
         mat_dim: int = self.hamiltonian.get_hamiltonian_size()
-        hamiltonian_term: npt.NDArray[np.complex128] = np.zeros((mat_dim, mat_dim), dtype=np.complex128)
+
+        hamiltonian_term: npt.NDArray[np.float64] = np.zeros((mat_dim, mat_dim), dtype=np.float64)
+        full_diagonal: npt.NDArray[np.float64] = np.zeros(mat_dim, dtype=np.float64)
         for mode in range(self.hamiltonian.number_of_effective_modes):
-            # First, get the interaction coming from the matter hamiltonian (also accounting for light polarization).
-            # This is a matrix of shape (matter_hamiltonian_dimension, matter_hamiltonian_dimension)
-            h_int = self.hamiltonian.matter_hamiltonian.get_interaction_hamiltonian(
-                    self.hamiltonian.modes_parallel_momenta[mode], polarization_directions)
-            matter_interaction = None
-            for key in h_int.keys():
-                if matter_interaction is None:
-                    matter_interaction = h_int[key] * self.hamiltonian.modes_polarization[direction_to_index(key)]
-                else:
-                    matter_interaction += h_int[key] * self.hamiltonian.modes_polarization[direction_to_index(key)]
-            matter_interaction_hermitian_conjugate = matter_interaction.conj().T  # Get a view, no copy
-            del h_int
-
-            # Then, build the base photon hamiltonian for this mode. This is a vector of length
-            # (number_of_fock_states ** (mode+1)) which accounts for the light matter coupling and the Fock states
-            # coefficients. The base is built in such a way that it can be repeated to get the correct dimensions.
+            a_0: np.float64 = self.hamiltonian.modes_couplings[mode] ** 2
             preceding_modes_dimension: int = number_of_fock_states ** mode
-            a_0 = self.hamiltonian.modes_couplings[mode]
-            fock_states_coefficients = np.sqrt(np.arange(1, number_of_fock_states, dtype=np.float64))
-            base = -a_0 * np.repeat(fock_states_coefficients, preceding_modes_dimension).astype(np.complex128)
-            del fock_states_coefficients
+            following_dim: int = number_of_fock_states ** (self.hamiltonian.number_of_effective_modes - mode - 1)
 
-            identity = np.identity(
-                    number_of_fock_states ** (self.hamiltonian.number_of_effective_modes - (mode + 1)),
-                    dtype=np.complex128)
-            # The bilinear coupling term has two contributions: the one coming from the matter interaction (above
-            # the main diagonal, representing the photonic annihilation operator) and the one coming from its hermitian
-            # conjugate (below the main diagonal, representing the photonic creation operator).
-            for i in range(2):
-                # Build the Fock matrix, which represents the light matter coupling and the fock states coefficients
-                fock_coupling_op = np.kron(identity, np.diag(base, k=(-1) ** i * preceding_modes_dimension))
-                # Tensor product with the interaction coming from the matter hamiltonian
-                hamiltonian_term += np.kron(fock_coupling_op,
-                                            matter_interaction if i == 0 else matter_interaction_hermitian_conjugate)
-                del fock_coupling_op
-            # Clean up the variables to free memory
-            del identity, matter_interaction, matter_interaction_hermitian_conjugate, base
+            # --- Diagonal part ---
+            # Closed form: 0.5 * a_0 * (1 + 2n) per block of size preceding_dim
+            fock_indices = np.repeat(np.arange(number_of_fock_states), preceding_modes_dimension)
+            diag_base: npt.NDArray[np.float64] = 0.5 * a_0 * (1.0 + 2.0 * fock_indices)
+            del fock_indices
             gc.collect()
+
+            light_diagonal: npt.NDArray[np.float64] = np.tile(diag_base, following_dim)
+            del diag_base
+            gc.collect()
+
+            full_diagonal += np.repeat(light_diagonal, matter_dim)
+            del light_diagonal
+            gc.collect()
+
+            # --- Off-diagonal (A^2) part ---
+            # Coefficients: 0.5 * a_0^2 * sqrt((n+1)(n+2)) for n = 0, ..., N_fock-3
+            ph = np.arange(number_of_fock_states - 2, dtype=np.float64)
+            fock_states_coefficients: npt.NDArray[np.float64] = (
+                    0.5 * a_0 ** 2 * np.sqrt((ph + 1.0) * (ph + 2.0))
+            )
+            base: npt.NDArray[np.float64] = np.repeat(fock_states_coefficients, preceding_modes_dimension)
+            del ph, fock_states_coefficients
+            gc.collect()
+
+            # Build the off-diagonal in the mode subspace
+            h_a2: npt.NDArray[np.float64] = (
+                    np.diag(base, k=2 * preceding_modes_dimension) + np.diag(base, k=-2 * preceding_modes_dimension)
+            )
+            del base
+            gc.collect()
+
+            # Tensor with following modes identity
+            h_a2 = np.kron(np.eye(following_dim, dtype=np.float64), h_a2)
+            gc.collect()
+
+            # Tensor with matter identity
+            h_a2 = np.kron(h_a2, np.eye(matter_dim, dtype=np.float64))
+            gc.collect()
+
+            hamiltonian_term += h_a2
+            del h_a2
+            gc.collect()
+
+        # Add the diagonal once after the loop
+        hamiltonian_term += np.diag(full_diagonal)
+        del full_diagonal
+        gc.collect()
+
         return hamiltonian_term
