@@ -22,7 +22,7 @@ import numpy as np
 import numpy.typing as npt
 
 from openqed.grid.k_space_grid import KSpaceGrid
-from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian
+from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian, MatterHamiltonianTheoryMode
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.terms.kinetic_term import KineticTerm
 from openqed.hamiltonians.terms.effective_2d_coulomb import Effective2DCoulombPotential
@@ -38,6 +38,7 @@ class MottWannierHamiltonian(MatterHamiltonian):
     This class is the Mott-Wannier Hamiltonian class. It inherits from the base Hamiltonian class.
     """
     def __init__(self,
+                mode: MatterHamiltonianTheoryMode,
                 terms: list[str],
                 exciton: str,
                  *,
@@ -63,7 +64,7 @@ class MottWannierHamiltonian(MatterHamiltonian):
             dielectric_constants: The dielectric constants of the layers in the bilayer structure.
         """
         # First, initialize the base Hamiltonian class
-        super().__init__("Mott-Wannier", terms, grid=grid)
+        super().__init__("Mott-Wannier", terms, mode=mode, grid=grid)
         self.term_to_instance: "OrderedDict[MottWannierHamiltonianTerms, HamiltonianTerm]" = OrderedDict()
         self.exciton = exciton
         self.effective_masses = self._get_effective_mass(
@@ -142,8 +143,9 @@ class MottWannierHamiltonian(MatterHamiltonian):
 
         return exciton_effective_mass
 
-    def get_hamiltonian(self) -> npt.NDArray[np.complex128]:
-        """This method builds the Mott-Wannier Hamiltonian for a couple of layers.
+    def _get_many_body_hamiltonian(self) -> npt.NDArray[np.complex128]:
+        """Build the Mott-Wannier Hamiltonian as a single ``(N, N)`` matrix.
+
         See equation (13) of the supplementary information of
         https://pubs.acs.org/doi/10.1021/acs.nanolett.0c03019?fig=fig4&ref=pdf
 
