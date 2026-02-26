@@ -22,7 +22,7 @@ import numpy as np
 import numpy.typing as npt
 
 from openqed.grid.k_space_grid import KSpaceGrid
-from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian
+from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian, MatterHamiltonianFormalism
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.terms.kinetic_term import KineticTerm
 from openqed.hamiltonians.terms.effective_2d_coulomb import Effective2DCoulombPotential
@@ -38,18 +38,23 @@ class MottWannierHamiltonian(MatterHamiltonian):
     This class is the Mott-Wannier Hamiltonian class. It inherits from the base Hamiltonian class.
     """
     def __init__(self,
-                terms: list[str],
-                exciton: str,
+                 mode: MatterHamiltonianFormalism,
+                 terms: list[str],
+                 exciton: str,
                  *,
-                grid: KSpaceGrid,
-                electron_effective_mass: BilayerStructure | None = None,
-                hole_effective_mass: BilayerStructure | None = None,
-                thicknesses: BilayerStructure | None = None,
-                dielectric_constants: BilayerStructure | None = None
-            ) -> None:
+                 grid: KSpaceGrid,
+                 electron_effective_mass: BilayerStructure | None = None,
+                 hole_effective_mass: BilayerStructure | None = None,
+                 thicknesses: BilayerStructure | None = None,
+                 dielectric_constants: BilayerStructure | None = None
+                 ) -> None:
         """Initialize the Mott-Wannier Hamiltonian
 
         Args:
+            mode: The construction mode of the Hamiltonian. Must be one of ``"many_body"`` or ``"tight_binding"``. In
+                ``"many_body"`` mode :meth:`get_hamiltonian` returns the full ``(N, N)`` matrix over all k-points. In
+                ``"tight_binding"`` mode it returns a stacked array of shape ``(n_k, n_bands, n_bands)``,
+                 one small matrix per k-point.
             terms: a list of strings representing the terms of the Hamiltonian.
             exciton: The exciton for which the analytical screened potential is computed. It is a string
                 with the format `li_lj`, where `i` and `j` are numbers and the whole string is a key of
@@ -63,7 +68,7 @@ class MottWannierHamiltonian(MatterHamiltonian):
             dielectric_constants: The dielectric constants of the layers in the bilayer structure.
         """
         # First, initialize the base Hamiltonian class
-        super().__init__("Mott-Wannier", terms, grid=grid)
+        super().__init__("Mott-Wannier", terms, mode=mode, grid=grid)
         self.term_to_instance: "OrderedDict[MottWannierHamiltonianTerms, HamiltonianTerm]" = OrderedDict()
         self.exciton = exciton
         self.effective_masses = self._get_effective_mass(
@@ -142,8 +147,9 @@ class MottWannierHamiltonian(MatterHamiltonian):
 
         return exciton_effective_mass
 
-    def get_hamiltonian(self) -> npt.NDArray[np.complex128]:
-        """This method builds the Mott-Wannier Hamiltonian for a couple of layers.
+    def _get_many_body_hamiltonian(self) -> npt.NDArray[np.complex128]:
+        """Build the Mott-Wannier Hamiltonian as a single ``(N, N)`` matrix.
+
         See equation (13) of the supplementary information of
         https://pubs.acs.org/doi/10.1021/acs.nanolett.0c03019?fig=fig4&ref=pdf
 

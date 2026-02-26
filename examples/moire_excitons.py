@@ -24,6 +24,7 @@ from ase.units import Bohr
 import numpy as np
 
 from openqed.grid import KSpaceGrid
+from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonianFormalism
 from openqed.unit_cells import HexagonalUnitCell
 
 from openqed.hamiltonians import MottWannierHamiltonian, MoireExcitonHamiltonian, Hamiltonian
@@ -70,6 +71,7 @@ thicknesses = BilayerStructure(
 )
 
 mott_wannier = MottWannierHamiltonian(
+        mode=MatterHamiltonianFormalism.MANY_BODY,
         terms=[MottWannierHamiltonianTerms.KINETIC.value, MottWannierHamiltonianTerms.EFFECTIVE_2D_COULOMB.value],
         exciton="l1_l1", # Intralayer exciton of the first layer
         grid=grid,
