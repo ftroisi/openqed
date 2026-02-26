@@ -24,7 +24,7 @@ import numpy.typing as npt
 
 from openqed.grid.grid import Grid
 from openqed.grid.real_space_grid import RealSpaceGrid
-from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian, MatterHamiltonianTheoryMode
+from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian, MatterHamiltonianFormalism
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.terms.kinetic_term import KineticTerm
 from openqed.hamiltonians.terms.free_exciton_term import FreeExcitonTerm
@@ -56,18 +56,17 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
             https://www.nature.com/articles/s41467-025-67570-2
     """
     def __init__(self,
-                terms: list[str],
-                mode: MatterHamiltonianTheoryMode,
+                 terms: list[str],
                  *,
-                grid: Grid,
-                wannier_states: BilayerExcitons,
-                wannier_binding_energies: BilayerExcitons,
-                band_gap: BilayerExcitons,
-                moire_matrix_elements: MoireExcitonsMomentumMatrixElements,
-                electron_effective_mass: BilayerStructure | None = None,
-                hole_effective_mass: BilayerStructure | None = None,
-                moire_parameters: MoirePotentialParameters,
-            ) -> None:
+                 grid: Grid,
+                 wannier_states: BilayerExcitons,
+                 wannier_binding_energies: BilayerExcitons,
+                 band_gap: BilayerExcitons,
+                 moire_matrix_elements: MoireExcitonsMomentumMatrixElements,
+                 electron_effective_mass: BilayerStructure | None = None,
+                 hole_effective_mass: BilayerStructure | None = None,
+                 moire_parameters: MoirePotentialParameters,
+                 ) -> None:
         """Initialize the Moiré Exciton Hamiltonian
 
         Args:
@@ -83,7 +82,7 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
         if isinstance(grid, RealSpaceGrid):
             raise NotImplementedError("RealSpaceGrid is not supported yet")
         # First, initialize the base Hamiltonian class
-        super().__init__("Moiré Exciton", terms, mode=mode, grid=grid)
+        super().__init__("Moiré Exciton", terms, mode=MatterHamiltonianFormalism.MANY_BODY, grid=grid)
         # Save the wannier states
         self.wannier_states = wannier_states
         if len(wannier_states) != 1:

@@ -22,7 +22,7 @@ import numpy as np
 import numpy.typing as npt
 
 from openqed.grid.k_space_grid import KSpaceGrid
-from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian, MatterHamiltonianTheoryMode
+from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian, MatterHamiltonianFormalism
 from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.terms.kinetic_term import KineticTerm
 from openqed.hamiltonians.terms.effective_2d_coulomb import Effective2DCoulombPotential
@@ -38,19 +38,23 @@ class MottWannierHamiltonian(MatterHamiltonian):
     This class is the Mott-Wannier Hamiltonian class. It inherits from the base Hamiltonian class.
     """
     def __init__(self,
-                mode: MatterHamiltonianTheoryMode,
-                terms: list[str],
-                exciton: str,
+                 mode: MatterHamiltonianFormalism,
+                 terms: list[str],
+                 exciton: str,
                  *,
-                grid: KSpaceGrid,
-                electron_effective_mass: BilayerStructure | None = None,
-                hole_effective_mass: BilayerStructure | None = None,
-                thicknesses: BilayerStructure | None = None,
-                dielectric_constants: BilayerStructure | None = None
-            ) -> None:
+                 grid: KSpaceGrid,
+                 electron_effective_mass: BilayerStructure | None = None,
+                 hole_effective_mass: BilayerStructure | None = None,
+                 thicknesses: BilayerStructure | None = None,
+                 dielectric_constants: BilayerStructure | None = None
+                 ) -> None:
         """Initialize the Mott-Wannier Hamiltonian
 
         Args:
+            mode: The construction mode of the Hamiltonian. Must be one of ``"many_body"`` or ``"tight_binding"``. In
+                ``"many_body"`` mode :meth:`get_hamiltonian` returns the full ``(N, N)`` matrix over all k-points. In
+                ``"tight_binding"`` mode it returns a stacked array of shape ``(n_k, n_bands, n_bands)``,
+                 one small matrix per k-point.
             terms: a list of strings representing the terms of the Hamiltonian.
             exciton: The exciton for which the analytical screened potential is computed. It is a string
                 with the format `li_lj`, where `i` and `j` are numbers and the whole string is a key of

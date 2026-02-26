@@ -25,7 +25,7 @@ from openqed.grid.grid import Grid
 from openqed.hamiltonians.hamiltonian import Hamiltonian
 from openqed.hamiltonians.types import ModePolarization
 
-class MatterHamiltonianTheoryMode(Enum):
+class MatterHamiltonianFormalism(Enum):
     MANY_BODY = "many_body"
     TIGHT_BINDING = "tight_binding"
 
@@ -37,7 +37,7 @@ class MatterHamiltonian(Hamiltonian, ABC):
     def __init__(self,
                  name: str,
                  terms: list[str],
-                 mode: str | MatterHamiltonianTheoryMode,
+                 mode: str | MatterHamiltonianFormalism,
                  grid: Grid
         ) -> None:
         """Initializes the MatterHamiltonian
@@ -45,26 +45,26 @@ class MatterHamiltonian(Hamiltonian, ABC):
         Args:
             name: The name of the hamiltonian.
             terms: a list of strings representing the terms of the Hamiltonian.
-            grid: The grid object to use. The Hamiltonian will be represented on this grid.
-            mode: The construction mode of the Hamiltonian. Must be one of ``"many-body"`` or ``"tight-binding"``. In
-                ``"many-body"`` mode :meth:`get_hamiltonian` returns the full ``(N, N)`` matrix over all k-points. In
-                ``"tight-binding"`` mode it returns a stacked array of shape ``(n_k, n_bands, n_bands)``,
+            mode: The construction mode of the Hamiltonian. Must be one of ``"many_body"`` or ``"tight_binding"``. In
+                ``"many_body"`` mode :meth:`get_hamiltonian` returns the full ``(N, N)`` matrix over all k-points. In
+                ``"tight_binding"`` mode it returns a stacked array of shape ``(n_k, n_bands, n_bands)``,
                  one small matrix per k-point.
+            grid: The grid object to use. The Hamiltonian will be represented on this grid.
         """
         super().__init__(name, terms)
         self.grid: Grid = grid
         self.mode = mode
 
     @property
-    def mode(self) -> MatterHamiltonianTheoryMode:
+    def mode(self) -> MatterHamiltonianFormalism:
         """The construction mode of the Hamiltonian (``"many-body"`` or ``"tight-binding"``)."""
         return self._mode
 
     @mode.setter
-    def mode(self, value: str | MatterHamiltonianTheoryMode) -> None:
-        if not isinstance(value, (str, MatterHamiltonianTheoryMode)):
-            raise TypeError(f"mode must be a str or MatterHamiltonianTheoryMode, got {type(value).__name__!r}")
-        self._mode = MatterHamiltonianTheoryMode(value)
+    def mode(self, value: str | MatterHamiltonianFormalism) -> None:
+        if not isinstance(value, (str, MatterHamiltonianFormalism)):
+            raise TypeError(f"mode must be a str or MatterHamiltonianFormalism, got {type(value).__name__!r}")
+        self._mode = MatterHamiltonianFormalism(value)
 
 
     def get_hamiltonian(self) -> npt.NDArray[np.float64 | np.complex128]:
@@ -77,7 +77,7 @@ class MatterHamiltonian(Hamiltonian, ABC):
             * ``"many-body"`` mode — 2-D array of shape ``(N, N)``.
             * ``"tight-binding"`` mode — 3-D array of shape ``(n_k, n_bands, n_bands)``.
         """
-        if self.mode == MatterHamiltonianTheoryMode.MANY_BODY:
+        if self.mode == MatterHamiltonianFormalism.MANY_BODY:
             return self._get_many_body_hamiltonian()
         return self._get_tight_binding_hamiltonian()
 
