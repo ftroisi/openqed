@@ -38,6 +38,29 @@ class Observable(ABC):
         if self.results_path is not None and not os.path.exists(self.results_path):
             os.makedirs(self.results_path)
 
+    def resolve_output_path(self, filename: str) -> str:
+        """
+        Resolve the absolute output path for a result file.
+
+        If ``filename`` is already an absolute path, it is returned unchanged. Otherwise, it is
+        interpreted as relative to ``results_path`` when available, or to the current working
+        directory when ``results_path`` is ``None``.
+        """
+        if len(filename.strip()) == 0:
+            raise ValueError("The output filename cannot be empty or contain only whitespace.")
+
+        if os.path.isabs(filename):
+            output_path = filename
+        elif self.results_path is not None:
+            output_path = os.path.join(self.results_path, filename)
+        else:
+            output_path = os.path.join(os.getcwd(), filename)
+
+        parent_dir = os.path.dirname(output_path)
+        if len(parent_dir) > 0 and not os.path.exists(parent_dir):
+            os.makedirs(parent_dir)
+        return output_path
+
     @abstractmethod
     def compute(self):
         """This method computes the observable."""
