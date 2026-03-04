@@ -29,7 +29,7 @@ from openqed.hamiltonians.terms.hamiltonian_term import HamiltonianTerm
 from openqed.hamiltonians.terms.kinetic_term import KineticTerm
 from openqed.hamiltonians.terms.free_exciton_term import FreeExcitonTerm
 from openqed.hamiltonians.terms.moire_potential_term import MoirePotentialTerm, MoirePotentialParameters
-from openqed.hamiltonians.types import ModePolarization
+from openqed.hamiltonians.types import LightPolarization
 
 from openqed.hamiltonians.types.bilayer_excitons import BilayerExcitons, BilayerStructure, structure_key_to_exciton_key
 
@@ -174,7 +174,7 @@ class MoireExcitonHamiltonian(MatterHamiltonian):
 
     def get_interaction_hamiltonian(self,
                                     light_momentum: npt.NDArray[np.float64],
-                                    light_polarization: ModePolarization
+                                    light_polarization: LightPolarization
         ) -> Dict[Literal['x', 'y', 'z'], npt.NDArray[np.float64 | np.complex128]]:
         if light_momentum.ndim != 1 or light_momentum.shape[0] != self.grid.dimensions:
             raise ValueError("The light momentum must be a 1D array with the dimensions of the grid")

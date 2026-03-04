@@ -23,7 +23,7 @@ import numpy.typing as npt
 
 from openqed.grid.grid import Grid
 from openqed.hamiltonians.hamiltonian import Hamiltonian
-from openqed.hamiltonians.types import ModePolarization
+from openqed.hamiltonians.types import LightPolarization
 
 class MatterHamiltonianFormalism(Enum):
     MANY_BODY = "many_body"
@@ -103,7 +103,7 @@ class MatterHamiltonian(Hamiltonian, ABC):
     @abstractmethod
     def get_interaction_hamiltonian(self,
                                     light_momentum: npt.NDArray[np.float64],
-                                    light_polarization: ModePolarization
+                                    light_polarization: LightPolarization
         ) -> Dict[Literal['x', 'y', 'z'], npt.NDArray[np.float64 | np.complex128]]:
         """
         This method generates the interaction hamiltonian for this class. In a light-matter system,

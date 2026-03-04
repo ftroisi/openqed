@@ -16,6 +16,8 @@
 
 from abc import ABC, abstractmethod
 import os
+import numpy as np
+import numpy.typing as npt
 
 class Observable(ABC):
     """
@@ -60,6 +62,41 @@ class Observable(ABC):
         if len(parent_dir) > 0 and not os.path.exists(parent_dir):
             os.makedirs(parent_dir)
         return output_path
+
+    def save(self, filename: str, data: npt.NDArray[np.float64 | np.complex128], **kwargs) -> str:
+        """
+        Save linear response results to ``.npz`` format.
+
+        Args:
+            filename: Output file name (or absolute path). Must end with ``.npz``.
+            data: Observable values to save (as returned by :meth:`compute`)
+            kwargs: Additional keyword arguments to save alongside the data. These can be used to store metadata
+                such as the probe frequencies, the eta value, the polarization, etc.
+
+        Returns:
+            The absolute path of the written file.
+        """
+        output_path = self.resolve_output_path(filename)
+        if not output_path.endswith(".npz"):
+            raise ValueError("Output filename must end with '.npz'.")
+
+        np.savez(output_path, observable=data, **kwargs)
+        return output_path
+
+    @staticmethod
+    def _load_states(states_path: str) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64 | np.complex128]]:
+        if not os.path.exists(states_path):
+            raise FileNotFoundError(f"States file not found: {states_path}")
+        if not states_path.endswith(".npz"):
+            raise ValueError("`states_path` must point to a '.npz' file.")
+
+        data = np.load(states_path)
+        if "eigenval" not in data or "eigenvec" not in data:
+            raise ValueError("States file must contain `eigenval` and `eigenvec` arrays.")
+
+        eigenvalues = np.asarray(data["eigenval"], dtype=np.float64)
+        eigenvectors = np.asarray(data["eigenvec"], dtype=np.complex128)
+        return eigenvalues, eigenvectors
 
     @abstractmethod
     def compute(self):

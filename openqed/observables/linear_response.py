@@ -23,21 +23,10 @@ import numpy as np
 import numpy.typing as npt
 
 from .observable import Observable
+from openqed.hamiltonians.types.cavity import LightPolarization, direction_to_index
 
-ProbePolarization = Literal["x", "y", "z", "xy", "xz", "yz", "+", "-"]
-ProbeOperatorType = (npt.NDArray[np.float64] |
-                     npt.NDArray[np.complex128] |
-                     dict[Literal["x", "y", "z"], npt.NDArray[np.float64] | npt.NDArray[np.complex128]])
-
-
-def _direction_to_index(direction: str) -> int:
-    if direction == "x":
-        return 0
-    if direction == "y":
-        return 1
-    if direction == "z":
-        return 2
-    raise ValueError(f"Unsupported direction '{direction}'.")
+ProbeOperatorType = (npt.NDArray[np.float64 | np.complex128] |
+                     dict[Literal["x", "y", "z"], npt.NDArray[np.float64 | np.complex128]])
 
 
 class LinearResponse(Observable):
@@ -52,17 +41,17 @@ class LinearResponse(Observable):
     def __init__(
             self,
             *,
-            w_probe: npt.NDArray[np.float64],
+            omega_probe: npt.NDArray[np.float64],
             eta: float,
-            polarization: ProbePolarization = "x",
+            probe_polarization: LightPolarization,
             eigenvalues: npt.NDArray[np.float64] | None = None,
-            eigenvectors: npt.NDArray[np.float64] | npt.NDArray[np.complex128] | None = None,
+            eigenvectors: npt.NDArray[np.float64 | np.complex128] | None = None,
             states_path: str | None = None,
             results_path: str | None = None
     ) -> None:
         super().__init__(name="LinearResponse", results_path=results_path)
 
-        self.w_probe = np.asarray(w_probe, dtype=np.float64)
+        self.w_probe = np.asarray(omega_probe, dtype=np.float64)
         if self.w_probe.ndim != 1 or self.w_probe.shape[0] == 0:
             raise ValueError("`w_probe` must be a non-empty 1D array.")
 
@@ -70,7 +59,7 @@ class LinearResponse(Observable):
             raise ValueError("`eta` must be strictly positive.")
         self.eta: np.float64 = np.float64(eta)
 
-        self.polarization: ProbePolarization = polarization
+        self.polarization: LightPolarization = probe_polarization
 
         if states_path is not None and (eigenvalues is not None or eigenvectors is not None):
             raise ValueError(
@@ -100,8 +89,7 @@ class LinearResponse(Observable):
         """
         Compute the linear response function for the selected probe polarization.
 
-        For now, only transitions from the ground state to the excited states (0 -> m) are
-        included.
+        For now, only transitions from the ground state to the excited states (0 -> m) are included.
 
         Args:
             probe_operator: Probe operator in the polaritonic basis. Supported formats are:
@@ -147,64 +135,6 @@ class LinearResponse(Observable):
         self._last_response = response
         return response
 
-    def save_results(
-            self,
-            *,
-            filename: str,
-            response: npt.NDArray[np.float64] | None = None
-    ) -> str:
-        """
-        Save linear response results to ``.npz`` format.
-
-        Args:
-            filename: Output file name (or absolute path). Must end with ``.npz``.
-            response: Response values to save. If ``None``, the most recent value computed
-                by :meth:`compute` is used.
-
-        Returns:
-            The absolute path of the written file.
-        """
-        if response is None:
-            if self._last_response is None:
-                raise ValueError("No response available. Run `compute` first or pass `response` explicitly.")
-            response_data = self._last_response
-        else:
-            response_data = np.asarray(response, dtype=np.float64)
-
-        if response_data.shape != self.w_probe.shape:
-            raise ValueError(
-                f"`response` must have shape {self.w_probe.shape}, got {response_data.shape}."
-            )
-
-        output_path = self.resolve_output_path(filename)
-        if not output_path.endswith(".npz"):
-            raise ValueError("Output filename must end with '.npz'.")
-
-        np.savez(
-            output_path,
-            w_probe=self.w_probe,
-            response=response_data,
-            eta=self.eta,
-            polarization=self.polarization
-        )
-        return output_path
-
-    @staticmethod
-    def _load_states(states_path: str
-        ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.complex128]]:
-        if not os.path.exists(states_path):
-            raise FileNotFoundError(f"States file not found: {states_path}")
-        if not states_path.endswith(".npz"):
-            raise ValueError("`states_path` must point to a '.npz' file.")
-
-        data = np.load(states_path)
-        if "eigenval" not in data or "eigenvec" not in data:
-            raise ValueError("States file must contain `eigenval` and `eigenvec` arrays.")
-
-        eigenvalues = np.asarray(data["eigenval"], dtype=np.float64)
-        eigenvectors = np.asarray(data["eigenvec"], dtype=np.complex128)
-        return eigenvalues, eigenvectors
-
     def _validate_states(self) -> None:
         if self.eigenvalues.ndim != 1 or self.eigenvalues.shape[0] == 0:
             raise ValueError("`eigenvalues` must be a non-empty 1D array.")
@@ -234,8 +164,7 @@ class LinearResponse(Observable):
 
         probe_operator_array = np.asarray(probe_operator, dtype=np.complex128)
         if probe_operator_array.ndim == 2:
-            if (probe_operator_array.shape[0] != expected_size or
-                    probe_operator_array.shape[1] != expected_size):
+            if probe_operator_array.shape[0] != expected_size or probe_operator_array.shape[1] != expected_size:
                 raise ValueError(
                     f"Probe operator shape must be ({expected_size}, {expected_size}), "
                     f"got {probe_operator_array.shape}."
@@ -283,10 +212,10 @@ class LinearResponse(Observable):
             probe_operator: npt.NDArray[np.complex128]
     ) -> npt.NDArray[np.complex128]:
         if self.polarization in ["x", "y", "z"]:
-            return probe_operator[_direction_to_index(self.polarization), :, :]
+            return probe_operator[direction_to_index(self.polarization), :, :]
         if self.polarization in ["xy", "xz", "yz"]:
-            first_idx = _direction_to_index(self.polarization[0])
-            second_idx = _direction_to_index(self.polarization[1])
+            first_idx = direction_to_index(self.polarization[0])
+            second_idx = direction_to_index(self.polarization[1])
             return (probe_operator[first_idx, :, :] + probe_operator[second_idx, :, :]) / np.sqrt(2)
         if self.polarization == "+":
             return (probe_operator[0, :, :] + 1j * probe_operator[1, :, :]) / np.sqrt(2)

@@ -34,7 +34,7 @@ from openqed.hamiltonians.moire_exciton_hamiltonian import MoireExcitonHamiltoni
 from openqed.hamiltonians.mott_wannier_hamiltonian import MottWannierHamiltonianTerms
 from openqed.hamiltonians.terms.moire_potential_term import MoirePotentialParameters
 
-from openqed.hamiltonians.types import BilayerExcitons, BilayerStructure, CavityParameters, ModePolarization
+from openqed.hamiltonians.types import BilayerExcitons, BilayerStructure, CavityParameters, LightPolarization
 
 HA_TO_EV = 27.2114079527
 spacing = np.float64(0.0015)
@@ -167,7 +167,7 @@ cavity_parameters = CavityParameters(
     modes_energies=np.array([0.01, 0.02], dtype=np.float64),
     modes_couplings=np.array([0.01, 0.01], dtype=np.float64),
     modes_parallel_momenta=np.array([[0., 0.],[0., 0.]], dtype=np.float64),
-    modes_polarization=ModePolarization.LINEAR_X
+    modes_polarization=LightPolarization.LINEAR_X
 )
 lm = PauliFierzHamiltonian(
         terms=[
