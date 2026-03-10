@@ -27,5 +27,9 @@ class DummyHamiltonian(MatterHamiltonian):
     def get_hamiltonian_size(self) -> int:
         return np.size(self.grid.flat_grid(), 0)
 
+    def _get_many_body_hamiltonian(self):
+        n = self.get_hamiltonian_size()
+        return np.zeros((n, n), dtype=np.float64)
+
     def get_interaction_hamiltonian(self, light_momentum, light_polarization):
         raise NotImplementedError()
