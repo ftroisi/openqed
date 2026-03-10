@@ -134,19 +134,19 @@ class LinearResponse(Observable):
         projected_probe_operator = self._project_probe_operator()
         transition_matrix = np.conj(states.T) @ projected_probe_operator @ states
 
-        # If we are not interested in the transitions between excited states, we can just
-        # set the transition elements corresponding to m -> n to zero (only keep GS -> n)
+        # For the full Kubo sum (include_non_ground_state_transitions=True) all off-diagonal
+        # pairs are kept, but the counter-rotating upper-triangle elements receive a (-1) sign
+        # from the occupation difference (f_m - f_n) = -1 for ground-to-excited pairs.
         if not self.include_non_ground_state_transitions:
-            transition_matrix[1:, 1:] = 0.
+            transition_matrix[1:, 1:] = 0.  # zero excited-to-excited transitions
         transition_elements: npt.NDArray[np.float64] = np.abs(transition_matrix) ** 2
         del transition_matrix, projected_probe_operator, states
-        # Finally account for the occupation of the states. In linear response theory the
-        # transition element is (f_m - f_n)*|<Psi_m|P|Psi_n>|^2. The elements in the upper
-        # triangular part of transition_elem represent transitions from m -> n, with m > n. The
-        # ones in the lower part are vice versa, thus we need to multiply them by -1 to account for
-        # the inverse occupations
+        # Account for occupation differences: upper-triangle elements T[m,n] with m<n use the
+        # emission denominator omega+(E_n-E_m), so their occupation weight (f_m-f_n)<0
+        # contributes a minus sign.  Lower-triangle elements T[n,m] with n>m are the absorption
+        # terms and carry a positive occupation weight.
         rows, cols = transition_elements.shape
-        transition_elements[np.arange(rows)[:, None] > np.arange(cols)] *= -1
+        transition_elements[np.arange(rows)[:, None] < np.arange(cols)] *= -1
 
         # Compute the energy differences between all eigenvalues
         energy_differences: npt.NDArray[np.float64] = np.add.outer(energies, -energies)
@@ -167,6 +167,32 @@ class LinearResponse(Observable):
                 # Then, compute the response function by doing transition_elem / denominator.
                 response_function[omega_idx] = -np.imag(np.sum(transition_elements / denominator))
         return response_function
+
+    def save(self, filename: str, data: npt.NDArray[np.float64], **kwargs) -> str:
+        """
+        Save the linear response together with its metadata (omega_probe, eta,
+        probe_polarization) to an ``.npz`` file.
+
+        Args:
+            filename: Output file name (or absolute path). Must end with ``.npz``.
+            data: Response array as returned by :meth:`compute`.
+            kwargs: Additional arrays/scalars forwarded to the base :meth:`save`.
+
+        Returns:
+            Absolute path of the written file.
+        """
+        return super().save(
+            filename,
+            data,
+            **{
+                LinearResponseFileKey.OMEGA_PROBE.value: self.omega_probe,
+                LinearResponseFileKey.ETA.value: np.array(self.eta),
+                LinearResponseFileKey.PROBE_POLARIZATION.value: np.array(
+                    str(self.polarization.value)
+                ),
+            },
+            **kwargs,
+        )
 
     def _resolve_number_of_states(self) -> int:
         """
