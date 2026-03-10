@@ -54,6 +54,7 @@ class LinearResponse(Observable):
             *,
             omega_probe: npt.NDArray[np.float64],
             eta: float,
+            include_non_ground_state_transitions: bool = False,
             probe_polarization: LightPolarization,
             probe_operator: dict[Literal["x", "y", "z"], npt.NDArray[np.float64 | np.complex128]],
             number_of_states: int | None = None,
@@ -68,6 +69,7 @@ class LinearResponse(Observable):
         Args:
             omega_probe: Probe frequency grid where the response is evaluated.
             eta: Positive imaginary broadening.
+            include_non_ground_state_transitions: Whether to include non-ground state transitions.
             probe_polarization: Probe polarization selector used to project the operator components.
             probe_operator: Probe operator components as a dictionary with keys ``'x'``, ``'y'``, ``'z'`` (subset
                 allowed depending on ``probe_polarization``). Values must be square matrices in the polaritonic basis.
@@ -87,6 +89,7 @@ class LinearResponse(Observable):
         if self.omega_probe.ndim != 1 or self.omega_probe.shape[0] == 0:
             raise ValueError("`omega_probe` must be a non-empty 1D array.")
 
+        self.include_non_ground_state_transitions = include_non_ground_state_transitions
         if eta <= 0:
             raise ValueError("`eta` must be strictly positive.")
         self.eta: np.float64 = np.float64(eta)
@@ -94,6 +97,9 @@ class LinearResponse(Observable):
         self.polarization: LightPolarization = probe_polarization
         self.probe_operator: dict[Literal["x", "y", "z"], npt.NDArray[np.float64 | np.complex128]] = probe_operator
         self.number_of_states: int | None = number_of_states
+        if self.number_of_states is not None:
+            raise NotImplementedError(
+                    "`number_of_states` selection is not yet implemented. Please set it to None to use all states.")
 
         if states_path is not None and (eigenvalues is not None or eigenvectors is not None):
             raise ValueError("Specify either `states_path` or (`eigenvalues`, `eigenvectors`), but not both.")
@@ -125,23 +131,42 @@ class LinearResponse(Observable):
         energies: npt.NDArray[np.float64] = self.eigenvalues[:n_states]
         states: npt.NDArray[np.complex128] = self.eigenvectors[:, :n_states]
 
-        projected_probe_operator = self._project_probe_operator(expected_size=states.shape[0])
+        projected_probe_operator = self._project_probe_operator()
         transition_matrix = np.conj(states.T) @ projected_probe_operator @ states
 
-        transition_elements: npt.NDArray[np.float64] = np.abs(transition_matrix[0, 1:]) ** 2
-        energy_differences: npt.NDArray[np.float64] = energies[1:] - energies[0]
+        # If we are not interested in the transitions between excited states, we can just
+        # set the transition elements corresponding to m -> n to zero (only keep GS -> n)
+        if not self.include_non_ground_state_transitions:
+            transition_matrix[1:, 1:] = 0.
+        transition_elements: npt.NDArray[np.float64] = np.abs(transition_matrix) ** 2
+        del transition_matrix, projected_probe_operator, states
+        # Finally account for the occupation of the states. In linear response theory the
+        # transition element is (f_m - f_n)*|<Psi_m|P|Psi_n>|^2. The elements in the upper
+        # triangular part of transition_elem represent transitions from m -> n, with m > n. The
+        # ones in the lower part are vice versa, thus we need to multiply them by -1 to account for
+        # the inverse occupations
+        rows, cols = transition_elements.shape
+        transition_elements[np.arange(rows)[:, None] > np.arange(cols)] *= -1
 
-        non_zero_energy_diff = np.abs(energy_differences) > 1e-14
-        if np.any(~non_zero_energy_diff):
-            energy_differences = energy_differences[non_zero_energy_diff]
-            transition_elements = transition_elements[non_zero_energy_diff]
+        # Compute the energy differences between all eigenvalues
+        energy_differences: npt.NDArray[np.float64] = np.add.outer(energies, -energies)
+        energy_differences = energy_differences[:n_states, :n_states]
+        energy_differences[np.where(np.abs(energy_differences) < 1e-5)] = self.omega_probe[1] - self.omega_probe[0]
+        del energies
 
-        if transition_elements.shape[0] == 0:
-            return np.zeros_like(self.omega_probe, dtype=np.float64)
+        non_zero_transition_elements = np.abs(transition_elements) > 1e-14
+        if np.any(~non_zero_transition_elements):
+            energy_differences = energy_differences[non_zero_transition_elements]
+            transition_elements = transition_elements[non_zero_transition_elements]
 
-        denominator = self.omega_probe[:, np.newaxis] - energy_differences[np.newaxis, :] + 1j * self.eta
-        response = -np.imag(np.sum(transition_elements[np.newaxis, :] / denominator, axis=1))
-        return response
+        response_function: npt.NDArray[np.float64] = np.zeros_like(self.omega_probe, dtype=np.float64)
+        if transition_elements.shape[0] > 0:
+            for omega_idx, _ in enumerate(self.omega_probe):
+                # First, compute the denominator.
+                denominator = self.omega_probe[omega_idx] - energy_differences + 1j * self.eta
+                # Then, compute the response function by doing transition_elem / denominator.
+                response_function[omega_idx] = -np.imag(np.sum(transition_elements / denominator))
+        return response_function
 
     def _resolve_number_of_states(self) -> int:
         """
@@ -178,12 +203,9 @@ class LinearResponse(Observable):
         self.eigenvalues = self.eigenvalues[sorted_indices]
         self.eigenvectors = self.eigenvectors[:, sorted_indices]
 
-    def _project_probe_operator(self, expected_size: int) -> npt.NDArray[np.complex128]:
+    def _project_probe_operator(self) -> npt.NDArray[np.complex128]:
         """
         Build the polarization-projected probe operator.
-
-        Args:
-            expected_size: Expected matrix dimension in the polaritonic basis.
 
         Raises:
             ValueError: If the polarization is unsupported or if required probe components are missing/inconsistent.
@@ -193,30 +215,37 @@ class LinearResponse(Observable):
         """
         pol = self.polarization.value
         if pol in ["x", "y", "z"]:
-            return self._get_probe_component(pol, expected_size)
-        if pol in ["xy", "xz", "yz"]:
-            first = self._get_probe_component(pol[0], expected_size)
-            second = self._get_probe_component(pol[1], expected_size)
-            return (first + second) / np.sqrt(2)
-        if pol == "+":
-            return (
-                self._get_probe_component("x", expected_size)
-                + 1j * self._get_probe_component("y", expected_size)
-            ) / np.sqrt(2)
-        if pol == "-":
-            return (
-                self._get_probe_component("x", expected_size)
-                - 1j * self._get_probe_component("y", expected_size)
-            ) / np.sqrt(2)
-        raise ValueError(f"Unsupported polarization '{self.polarization.value}'.")
+            matter_response: npt.NDArray[np.complex128] = self._get_probe_component(pol)
+        elif pol in ["xy", "xz", "yz"]:
+            first = self._get_probe_component(pol[0])
+            second = self._get_probe_component(pol[1])
+            matter_response: npt.NDArray[np.complex128] = (first + second) / np.sqrt(2)
+            del first, second
+        elif pol == "+" or pol == "-":
+            first = self._get_probe_component("x")
+            second = self._get_probe_component("y")
+            matter_response: npt.NDArray[np.complex128] =\
+                (first + 1j*second) / np.sqrt(2) if pol == "+" else (first - 1j*second) / np.sqrt(2)
+            del first, second
+        else:
+            raise ValueError(f"Unsupported polarization '{self.polarization.value}'.")
+        # Get the correct matrix size for the linear response operator. Its representation is:
+        # mat_res X {1_m0 X ... X 1_mn} where mat_res is the matter response and 1_mi is the
+        # identity operator for the i-th photon mode
+        # First, check that the matter response size is consistent with the polaritonic basis size.
+        if self.eigenvalues.shape[0] % matter_response.shape[0] != 0:
+            raise ValueError(f"Probe operator size {matter_response.shape} is inconsistent" +
+                             f"with the polaritonic basis size {self.eigenvalues.shape[0]}.")
+        # Then, build the full probe operator by taking the Kronecker product with the identity over the photon modes.
+        matter_repetitions = self.eigenvalues.shape[0] // matter_response.shape[0]
+        return np.kron(matter_response, np.eye(matter_repetitions, dtype=np.complex128))
 
-    def _get_probe_component(self, direction: Literal["x", "y", "z"], expected_size: int) -> npt.NDArray[np.complex128]:
+    def _get_probe_component(self, direction: Literal["x", "y", "z"]) -> npt.NDArray[np.complex128]:
         """
         Retrieve and validate a probe-operator Cartesian component.
 
         Args:
             direction: Cartesian component key (``'x'``, ``'y'``, or ``'z'``).
-            expected_size: Expected matrix dimension in the polaritonic basis.
 
         Returns:
             Complex probe-operator matrix for the requested direction.
@@ -228,10 +257,4 @@ class LinearResponse(Observable):
             raise ValueError(
                 f"Missing probe-operator component '{direction}. Provide required keys in `probe_operator`."
             )
-        component = np.asarray(self.probe_operator[direction], dtype=np.complex128)
-        if component.shape != (expected_size, expected_size):
-            raise ValueError(
-                f"Probe-operator component '{direction}' has shape {component.shape}, "
-                f"expected ({expected_size}, {expected_size})."
-            )
-        return component
+        return np.asarray(self.probe_operator[direction], dtype=np.complex128)
