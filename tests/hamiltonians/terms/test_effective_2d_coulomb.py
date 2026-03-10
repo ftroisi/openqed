@@ -108,5 +108,34 @@ class TestEffective2DCoulombPotential(BaseOpenqedTest):
             self.assertTrue(
                 np.isclose(potential[points_to_compare[0][i], points_to_compare[1][i]], ref))
 
+    # 3. Physics-meaningful tests
+
+    def test_coulomb_kernel_is_real(self):
+        """The Coulomb kernel must be purely real"""
+        kernel = self.coulomb_potential.generate_coulomb_kernel()
+        self.assertTrue(np.all(np.isreal(kernel)))
+
+    def test_coulomb_kernel_non_negative(self):
+        """The Coulomb kernel k = sqrt(kx^2 + ky^2) must be >= 0"""
+        kernel = self.coulomb_potential.generate_coulomb_kernel()
+        self.assertTrue(np.all(kernel >= -1e-15))
+
+    def test_coulomb_kernel_is_symmetric(self):
+        """The Coulomb kernel must be a symmetric matrix (k_ij = k_ji)"""
+        kernel = self.coulomb_potential.generate_coulomb_kernel()
+        self.assertTrue(np.allclose(kernel, kernel.T, atol=1e-12))
+
+    def test_intralayer_potential_is_real(self):
+        """The intralayer dielectric function must be purely real"""
+        kernel = self.coulomb_potential.generate_coulomb_kernel()
+        potential = self.coulomb_potential.get_intralayer_dielectric_function(
+            ref_layer="layer1", coupled_layer='layer2', k_grid=kernel)
+        self.assertTrue(np.all(np.isreal(potential)))
+
+    def test_invalid_exciton_type_raises(self):
+        """Setting an unsupported exciton type must raise ValueError"""
+        with self.assertRaises(ValueError):
+            self.coulomb_potential.exciton = "invalid"
+
 if __name__ == '__main__':
     unittest.main()

@@ -184,6 +184,58 @@ class TestLinearResponse(BaseOpenqedTest):
         self.assertGreater(peak1_val, peak2_val,
                            msg="Peak at 1.5 (larger matrix element) should dominate")
 
+    def test_response_is_real(self):
+        """The linear response (imaginary part of susceptibility) must be real-valued"""
+        linear_response = LinearResponse(
+            omega_probe=self.w_probe,
+            eta=self.eta,
+            probe_polarization=LightPolarization.LINEAR_X,
+            probe_operator=self.probe_operator,
+            eigenvalues=self.eigenvalues,
+            eigenvectors=self.eigenvectors
+        )
+        response = linear_response.compute()
+        self.assertTrue(np.all(np.isreal(response)))
+
+    def test_negative_eta_raises(self):
+        """Negative broadening eta must raise ValueError"""
+        with self.assertRaises(ValueError):
+            LinearResponse(
+                omega_probe=self.w_probe,
+                eta=-0.1,
+                probe_polarization=LightPolarization.LINEAR_X,
+                probe_operator=self.probe_operator,
+                eigenvalues=self.eigenvalues,
+                eigenvectors=self.eigenvectors
+            )
+
+    def test_save_bad_extension_raises(self):
+        """Saving to a non-.npz file must raise ValueError"""
+        linear_response = LinearResponse(
+            omega_probe=self.w_probe,
+            eta=self.eta,
+            probe_polarization=LightPolarization.LINEAR_X,
+            probe_operator=self.probe_operator,
+            eigenvalues=self.eigenvalues,
+            eigenvectors=self.eigenvectors
+        )
+        response = linear_response.compute()
+        with self.assertRaises(ValueError):
+            linear_response.save(filename="output.txt", data=response)
+
+    def test_load_states_missing_file_raises(self):
+        """Loading states from a non-existent file must raise FileNotFoundError"""
+        from openqed.observables.observable import Observable
+        with self.assertRaises(FileNotFoundError):
+            Observable._load_states("/tmp/nonexistent_states_file.npz")
+
+    def test_load_states_bad_extension_raises(self):
+        """Loading states from a non-.npz file must raise ValueError"""
+        with tempfile.NamedTemporaryFile(suffix=".txt") as f:
+            from openqed.observables.observable import Observable
+            with self.assertRaises(ValueError):
+                Observable._load_states(f.name)
+
 
 if __name__ == "__main__":
     unittest.main()

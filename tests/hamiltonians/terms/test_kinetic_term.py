@@ -75,5 +75,32 @@ class TestKineticTerm(BaseOpenqedTest):
         # Check that the maximum value is the maximum of the grid
         self.assertTrue(np.isclose(np.max(hamiltonian_term), eigenval[-1]))
 
+    def test_kinetic_energy_all_non_negative(self):
+        """Kinetic energy T = k^2 / (2m) must be >= 0 for all k-points"""
+        hamiltonian_term = self.free_exciton_term.get_hamiltonian_term()
+        self.assertTrue(np.all(hamiltonian_term >= -1e-15))
+
+    def test_kinetic_energy_is_real(self):
+        """Kinetic energy must be purely real"""
+        hamiltonian_term = self.free_exciton_term.get_hamiltonian_term()
+        self.assertTrue(np.all(np.isreal(hamiltonian_term)))
+
+    def test_kinetic_energy_zero_at_gamma(self):
+        """The kinetic energy at the Gamma point (k=0) must be exactly zero"""
+        hamiltonian_term = self.free_exciton_term.get_hamiltonian_term()
+        grid = self.free_exciton_term.hamiltonian.grid.flat_grid()
+        # Find the k-point closest to Gamma (origin)
+        k_norms = np.linalg.norm(grid, axis=1)
+        gamma_idx = np.argmin(k_norms)
+        self.assertTrue(np.isclose(hamiltonian_term[gamma_idx], 0.0, atol=1e-12))
+
+    def test_kinetic_energy_scales_with_mass(self):
+        """Halving the effective mass should double the kinetic energy"""
+        T_original = self.free_exciton_term.get_hamiltonian_term()
+        light_term = KineticTerm(self.hamiltonian, mass=np.float64(self.eff_mass / 2))
+        T_light = light_term.get_hamiltonian_term()
+        # T = k^2/(2m), so halving m doubles T
+        self.assertTrue(np.allclose(T_light, 2.0 * T_original, atol=1e-12))
+
 if __name__ == "__main__":
     unittest.main()
