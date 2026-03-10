@@ -47,13 +47,13 @@ class TestKSpaceGrid(BaseOpenqedTest):
     def test_1d_mesh(self):
         """ Test the mesh attribute for the 1D grid """
         self.assertEqual(len(self.grid_1d.mesh), 1)
-        self.assertEqual(self.grid_1d.mesh[0].shape[0], 20)
+        self.assertEqual(self.grid_1d.mesh[0].shape[0], 21)
 
     def test_2d_mesh(self):
         """ Test the mesh attribute for the 2D grid """
         self.assertEqual(len(self.grid_2d.mesh), 2)
-        self.assertEqual(self.grid_2d.mesh[0].shape, (40, 40))
-        self.assertEqual(self.grid_2d.mesh[1].shape, (40, 40))
+        self.assertEqual(self.grid_2d.mesh[0].shape, (41, 41))
+        self.assertEqual(self.grid_2d.mesh[1].shape, (41, 41))
 
     def test_grid_type(self):
         """ Test the grid_type attribute """
@@ -89,14 +89,14 @@ class TestKSpaceGrid(BaseOpenqedTest):
         #pylint: enable=protected-access
 
         # Check the shape of the flat grid
-        self.assertEqual(flat_grid.shape, (20, 1))
-        self.assertTrue(np.isclose(np.max(flat_grid, axis=0), 0.019)) # Boundary - spacing
+        self.assertEqual(flat_grid.shape, (21, 1))
+        self.assertTrue(np.isclose(np.max(flat_grid, axis=0), 0.02)) # Grid includes endpoint
 
     def test_flat_2d_grid(self):
         """ Test the flat_grid method for the 2D grid """
         flat_grid = self.grid_2d.flat_grid(cache_result=True)
         # Check the shape of the flat grid
-        self.assertEqual(flat_grid.shape, (1600, 2))
+        self.assertEqual(flat_grid.shape, (1681, 2))
         # Check the maximum values of the flat grid
         self.assertTrue(
             np.isclose(np.max(np.linalg.norm(flat_grid, axis=1)), np.sqrt(2*(-0.02)**2)))
@@ -122,11 +122,11 @@ class TestKSpaceGrid(BaseOpenqedTest):
         # Point 1: origin
         point = np.array([0.0, 0.0])
         index = self.grid_2d.get_point_index(point)
-        self.assertEqual(index, 820)
+        self.assertEqual(index, 840)
         # Point 2, last of the grid, defined as tuple
-        point = (0.019, 0.019)
+        point = (0.02, 0.02)
         index = self.grid_2d.get_point_index(point)
-        self.assertEqual(index, 1599)
+        self.assertEqual(index, 1680)
         # Test the case where the point has the wrong number of dimensions
         with self.assertRaises(ValueError):
             self.grid_2d.get_point_index(np.array([0.01]))

@@ -41,7 +41,7 @@ class TestMottWannierHamiltonian(BaseOpenqedTest):
         k_space_grid.flat_grid(cache_result=True)
 
         # Create an instance of the MottWannier class
-        terms = ['free_exciton', 'effective_2d_coulomb']
+        terms = ['kinetic_term', 'effective_2d_coulomb']
         electron_effective_mass: BilayerStructure = { 'layer1': np.float64(0.38) }
         hole_effective_mass: BilayerStructure = { 'layer1': np.float64(0.38) }
         thicknesses: BilayerStructure = {
@@ -57,7 +57,9 @@ class TestMottWannierHamiltonian(BaseOpenqedTest):
             'substrate2': np.float64(1.)
         }
         self.mott_wannier = MottWannierHamiltonian(
+            "many_body",
             terms,
+            "l1_l1",
             grid=k_space_grid,
             electron_effective_mass=electron_effective_mass,
             hole_effective_mass=hole_effective_mass,
@@ -67,9 +69,12 @@ class TestMottWannierHamiltonian(BaseOpenqedTest):
 
     def test_hydrogen_2d(self):
         """Test the hydrogen 2D case"""
-        hamiltonian = self.mott_wannier.get_hamiltonian(exciton="l1_l1")
+        hamiltonian = self.mott_wannier.get_hamiltonian()
         eigenval, _ = self.mott_wannier.diagonalize_hamiltonian(hamiltonian)
-        print(eigenval[0:5])
+        # Eigenvalues must be real (Hermitian Hamiltonian)
+        self.assertTrue(np.all(np.isreal(eigenval)))
+        # The ground state energy should be negative (bound state)
+        self.assertLess(eigenval[0], 0.0)
 
 if __name__ == "__main__":
     unittest.main()

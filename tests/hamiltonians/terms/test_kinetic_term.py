@@ -24,6 +24,7 @@ from tests.hamiltonians.dummy_hamiltonian import DummyHamiltonian
 from openqed.grid.k_space_grid import KSpaceGrid
 from openqed.hamiltonians.terms.kinetic_term import KineticTerm
 from openqed.hamiltonians.types import BilayerStructure
+from openqed.unit_cells.hexagonal_unit_cell import HexagonalUnitCell
 
 class TestKineticTerm(BaseOpenqedTest):
     """Test class for the KineticTerm class"""
@@ -40,8 +41,8 @@ class TestKineticTerm(BaseOpenqedTest):
             'layer2': np.float64(3.319) / Bohr
         }
         k_space_grid = KSpaceGrid(spacing=spacing, boundaries=boundaries)
-        k_space_grid.project_to_unit_cell(
-            real_space_lattice_parameter=np.float64(lattice_params["layer1"]), cache_result=True)
+        unit_cell = HexagonalUnitCell(np.float64(lattice_params["layer1"]))
+        k_space_grid.project_to_unit_cell(unit_cell, cache_result=True)
         # Init a dummy Hamiltonian
         self.hamiltonian = DummyHamiltonian(terms=['free_exciton'], grid=k_space_grid)
         # Set the effective masses
