@@ -20,7 +20,7 @@ from enum import Enum
 import numpy as np
 import numpy.typing as npt
 
-class ModePolarization(Enum):
+class LightPolarization(Enum):
     LINEAR_X = "x"
     LINEAR_Y = "y"
     LINEAR_Z = "z"
@@ -41,24 +41,24 @@ def direction_to_index(direction: str) -> int:
     raise ValueError("Unsupported direction")
 
 def mode_polarization_to_vector(
-        polarization: ModePolarization | tuple[np.complex128, np.complex128]) -> npt.NDArray[np.complex128]:
+        polarization: LightPolarization | tuple[np.complex128, np.complex128]) -> npt.NDArray[np.complex128]:
     """This method converts the mode polarization to a vector"""
-    if isinstance(polarization, ModePolarization):
-        if polarization == ModePolarization.LINEAR_X:
+    if isinstance(polarization, LightPolarization):
+        if polarization == LightPolarization.LINEAR_X:
             return np.array([1, 0, 0], dtype=np.complex128)
-        if polarization == ModePolarization.LINEAR_Y:
+        if polarization == LightPolarization.LINEAR_Y:
             return np.array([0, 1, 0], dtype=np.complex128)
-        if polarization == ModePolarization.LINEAR_Z:
+        if polarization == LightPolarization.LINEAR_Z:
             return np.array([0, 0, 0], dtype=np.complex128)
-        if polarization == ModePolarization.LINEAR_XY:
+        if polarization == LightPolarization.LINEAR_XY:
             return np.array([1, 1, 0], dtype=np.complex128) / np.sqrt(2)
-        if polarization == ModePolarization.LINEAR_XZ:
+        if polarization == LightPolarization.LINEAR_XZ:
             return np.array([1, 0, 0], dtype=np.complex128) / np.sqrt(2)
-        if polarization == ModePolarization.LINEAR_YZ:
+        if polarization == LightPolarization.LINEAR_YZ:
             return np.array([0, 1, 0], dtype=np.complex128) / np.sqrt(2)
-        if polarization == ModePolarization.CHIRAL_PLUS:
+        if polarization == LightPolarization.CHIRAL_PLUS:
             return np.array([1, 1j, 0], dtype=np.complex128) / np.sqrt(2)
-        if polarization == ModePolarization.CHIRAL_MINUS:
+        if polarization == LightPolarization.CHIRAL_MINUS:
             return np.array([1, -1j, 0], dtype=np.complex128) / np.sqrt(2)
         raise ValueError("Unsupported polarization")
     else:
@@ -69,7 +69,7 @@ def mode_polarization_to_vector(
             raise ValueError("The polarization vector cannot be the zero vector")
         return (polarization / norm).astype(np.complex128)
 
-def polarization_vector_to_directions(polarization: npt.NDArray[np.complex128]) -> ModePolarization:
+def polarization_vector_to_directions(polarization: npt.NDArray[np.complex128]) -> LightPolarization:
     """
     Converts a 3D polarization vector to a ModePolarization enum value.
 
@@ -107,12 +107,12 @@ def polarization_vector_to_directions(polarization: npt.NDArray[np.complex128]) 
             "Cannot determine polarization direction."
         )
     try:
-        return ModePolarization(pol)
+        return LightPolarization(pol)
     except ValueError:
         raise ValueError(
             f"Polarization vector {polarization} maps to direction string '{pol}', "
             f"which does not correspond to any ModePolarization member. "
-            f"Valid members are: {[m.value for m in ModePolarization]}."
+            f"Valid members are: {[m.value for m in LightPolarization]}."
         )
 
 
@@ -133,7 +133,7 @@ class CavityParameters:
     modes_parallel_momenta: npt.NDArray[np.float64]
     """A 2D array of shape (number of modes, direction) representing the momentum in the x, y and z directions for each
         mode ($\\mathbf{q}_{\\parallel}$). Its length must match the number of effective modes in the cavity."""
-    modes_polarization: ModePolarization | tuple[np.complex128, np.complex128]
+    modes_polarization: LightPolarization | tuple[np.complex128, np.complex128]
     """The polarization of the cavity modes. It can be one of the following:
         - 'x': linear polarization along the x direction
         - 'y': linear polarization along the y direction

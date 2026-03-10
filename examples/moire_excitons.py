@@ -34,7 +34,9 @@ from openqed.hamiltonians.moire_exciton_hamiltonian import MoireExcitonHamiltoni
 from openqed.hamiltonians.mott_wannier_hamiltonian import MottWannierHamiltonianTerms
 from openqed.hamiltonians.terms.moire_potential_term import MoirePotentialParameters
 
-from openqed.hamiltonians.types import BilayerExcitons, BilayerStructure, CavityParameters, ModePolarization
+from openqed.hamiltonians.types import BilayerExcitons, BilayerStructure, CavityParameters, LightPolarization
+
+from openqed.observables import LinearResponse
 
 HA_TO_EV = 27.2114079527
 spacing = np.float64(0.0015)
@@ -162,12 +164,12 @@ print(f"h_mat size: {moire_excitons.get_hamiltonian_size()}")
 
 # Now create light matter coupling
 cavity_parameters = CavityParameters(
-    number_of_effective_modes=2,
+    number_of_effective_modes=1,
     maximum_mode_occupation=2,
-    modes_energies=np.array([0.01, 0.02], dtype=np.float64),
-    modes_couplings=np.array([0.01, 0.01], dtype=np.float64),
-    modes_parallel_momenta=np.array([[0., 0.],[0., 0.]], dtype=np.float64),
-    modes_polarization=ModePolarization.LINEAR_X
+    modes_energies=np.array([0.01], dtype=np.float64),
+    modes_couplings=np.array([0.01], dtype=np.float64),
+    modes_parallel_momenta=np.array([[0., 0.]], dtype=np.float64),
+    modes_polarization=LightPolarization.LINEAR_X
 )
 lm = PauliFierzHamiltonian(
         terms=[
@@ -179,5 +181,17 @@ lm = PauliFierzHamiltonian(
         cavity_parameters=cavity_parameters,
         matter_hamiltonian=moire_excitons
 )
-lm.get_hamiltonian()
+exciton_lm_hamiltonian = lm.get_hamiltonian()
+eigenvalues, eigenvectors = Hamiltonian.diagonalize_hamiltonian(exciton_lm_hamiltonian)
 
+
+linear_response = LinearResponse(
+    omega_probe=np.array([0.01, 0.02], dtype=np.float64),
+    include_non_ground_state_transitions=False,
+    eta=0.01,
+    probe_polarization=LightPolarization.LINEAR_X,
+    probe_operator=moire_excitons.get_interaction_hamiltonian(np.array([0., 0.]), LightPolarization.LINEAR_X),
+    eigenvalues=eigenvalues,
+    eigenvectors=eigenvectors,
+)
+response = linear_response.compute()

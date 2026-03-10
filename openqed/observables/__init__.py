@@ -24,10 +24,14 @@ They can be used to compute physical quantities such as the linear response and 
 .. autosummary::
     :toctree: generated/
 
+    LinearResponse
+
 """
 
 from .observable import Observable
+from .linear_response import LinearResponse
 
 __all__: list[str] = [
-    "Observable"
+    "Observable",
+    "LinearResponse"
 ]
