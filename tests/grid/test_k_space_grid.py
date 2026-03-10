@@ -154,5 +154,108 @@ class TestKSpaceGrid(BaseOpenqedTest):
         self.assertEqual(index_after_proj, index_before_proj)
 
 
-if __name__ == "__main__":
-    unittest.main()
+    # 6. Test the dimensions property
+
+    def test_dimensions(self):
+        """Test the dimensions property"""
+        self.assertEqual(self.grid_1d.dimensions, 1)
+        self.assertEqual(self.grid_2d.dimensions, 2)
+
+    # 7. Test grid_size property
+
+    def test_grid_size(self):
+        """Test the grid_size property"""
+        self.assertEqual(self.grid_1d.grid_size, 21)
+        self.assertEqual(self.grid_2d.grid_size, 41)
+
+    # 8. Test get_spacing
+
+    def test_get_spacing(self):
+        """Test the get_spacing method returns a positive spacing"""
+        spacing = self.grid_1d.get_spacing()
+        self.assertGreater(spacing, 0.0)
+        spacing_2d = self.grid_2d.get_spacing()
+        self.assertGreater(spacing_2d, 0.0)
+
+    # 9. Test deallocate_flat_grid
+
+    def test_deallocate_flat_grid(self):
+        """Test that deallocate_flat_grid clears the cached grid"""
+        self.grid_2d.flat_grid(cache_result=True)
+        #pylint: disable=protected-access
+        self.assertIsNotNone(self.grid_2d._flat_grid)
+        self.grid_2d.deallocate_flat_grid()
+        self.assertIsNone(self.grid_2d._flat_grid)
+        #pylint: enable=protected-access
+
+    # 10. Test get_max_inscribed_circle_radius
+
+    def test_max_inscribed_circle_radius(self):
+        """Test the inscribed circle radius for the 2D grid"""
+        radius = self.grid_2d.get_max_inscribed_circle_radius()
+        # For a square grid [-0.02, 0.02] x [-0.02, 0.02], the inscribed circle radius is 0.02
+        self.assertGreater(radius, 0.0)
+        self.assertTrue(np.isclose(radius, 0.02, atol=1e-4))
+
+    def test_max_inscribed_circle_radius_1d_raises(self):
+        """Inscribed circle is only defined for 2D grids"""
+        with self.assertRaises(ValueError):
+            self.grid_1d.get_max_inscribed_circle_radius()
+
+    # 11. Test get_point_index for a point not in the grid
+
+    def test_get_index_not_found(self):
+        """get_point_index returns -1 for a point not in the grid"""
+        point = np.array([0.5, 0.5])  # far outside the grid
+        index = self.grid_2d.get_point_index(point)
+        self.assertEqual(index, -1)
+
+    # 12. Test flat_grid caching returns the same object
+
+    def test_flat_grid_caching_identity(self):
+        """After caching, subsequent calls return the same array object"""
+        grid1 = self.grid_2d.flat_grid(cache_result=True)
+        grid2 = self.grid_2d.flat_grid(cache_result=True)
+        self.assertIs(grid1, grid2)
+
+    # 13. Test project_to_unit_cell raises for 1D
+
+    def test_project_to_unit_cell_1d_raises(self):
+        """project_to_unit_cell should raise for non-2D grids"""
+        with self.assertRaises(NotImplementedError):
+            self.grid_1d.project_to_unit_cell(self.hexagonal_unit_cell)
+
+    # 14. Test 3D grid construction
+
+    def test_3d_grid(self):
+        """Test that a 3D KSpaceGrid can be created and flattened"""
+        grid_3d = KSpaceGrid(
+            boundaries={
+                'x': (np.float64(-0.01), np.float64(0.01)),
+                'y': (np.float64(-0.01), np.float64(0.01)),
+                'z': (np.float64(-0.01), np.float64(0.01))
+            },
+            spacing={
+                'x': np.float64(0.005),
+                'y': np.float64(0.005),
+                'z': np.float64(0.005)
+            }
+        )
+        self.assertEqual(grid_3d.dimensions, 3)
+        self.assertEqual(grid_3d.grid_type, GridType.K_SPACE)
+        flat = grid_3d.flat_grid()
+        self.assertEqual(flat.shape[1], 3)
+        # Grid should be 5 points per dim: -0.01, -0.005, 0.0, 0.005, 0.01
+        self.assertEqual(flat.shape[0], 5**3)
+
+    # 15. Test that both boundaries and spacing are required
+
+    def test_missing_boundaries_raises(self):
+        """Constructing without boundaries or spacing should raise"""
+        with self.assertRaises(ValueError):
+            KSpaceGrid(boundaries=None, spacing={'x': np.float64(0.001)})
+        with self.assertRaises(ValueError):
+            KSpaceGrid(
+                boundaries={'x': (np.float64(0.0), np.float64(0.02))},
+                spacing=None
+            )
