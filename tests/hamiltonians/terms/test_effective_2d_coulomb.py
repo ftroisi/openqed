@@ -1,4 +1,4 @@
-# Copyright 2025 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ class TestEffective2DCoulombPotential(BaseOpenqedTest):
         }
         k_space_grid = KSpaceGrid(spacing=spacing, boundaries=boundaries)
         k_space_grid.flat_grid(cache_result=True)
-        # Init a dummy Hamiltonian
+        # Init a dummy Hamiltonian
         self.hamiltonian = DummyHamiltonian(terms=['free_exciton'], grid=k_space_grid)
         # Set the effective masses
         self.thicknesses: BilayerStructure = {
@@ -55,7 +55,7 @@ class TestEffective2DCoulombPotential(BaseOpenqedTest):
             'layer2': np.float64(16.5),
             'substrate2': np.float64(3.9)
         }
-        # Create the FreeExciton class
+        # Create the FreeExciton class
         self.coulomb_potential = Effective2DCoulombPotential(
             self.hamiltonian,
             exciton='l1_l1',

@@ -1,4 +1,4 @@
-# Copyright 2025 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,19 +43,19 @@ class TestDiagonalizeHamiltonian(BaseOpenqedTest):
 
     def test_hermitian_2x2(self):
         """Standard 2x2 Hermitian: eigenvalues must be real"""
-        H = np.array([[1.0, 0.5], [0.5, 2.0]])
-        eigenval, eigenvec = Hamiltonian.diagonalize_hamiltonian(H)
+        hamiltonian = np.array([[1.0, 0.5], [0.5, 2.0]])
+        eigenval, eigenvec = Hamiltonian.diagonalize_hamiltonian(hamiltonian)
         self.assertTrue(np.all(np.isreal(eigenval)))
         # Verify H @ v = lambda * v
         for i in range(len(eigenval)):
-            lhs = H @ eigenvec[:, i]
+            lhs = hamiltonian @ eigenvec[:, i]
             rhs = eigenval[i] * eigenvec[:, i]
             self.assertTrue(np.allclose(lhs, rhs, atol=1e-12))
 
     def test_partial_diagonalization(self):
         """With number_of_eigenvalues, only that many values should be returned"""
-        H = np.diag(np.arange(1.0, 11.0))
-        eigenval, eigenvec = Hamiltonian.diagonalize_hamiltonian(H, number_of_eigenvalues=3)
+        hamiltonian = np.diag(np.arange(1.0, 11.0))
+        eigenval, eigenvec = Hamiltonian.diagonalize_hamiltonian(hamiltonian, number_of_eigenvalues=3)
         self.assertEqual(len(eigenval), 3)
         self.assertEqual(eigenvec.shape[1], 3)
         # Should be the 3 smallest eigenvalues (which="SM")
@@ -63,28 +63,27 @@ class TestDiagonalizeHamiltonian(BaseOpenqedTest):
 
     def test_restart_save_and_load(self):
         """diagonalize_hamiltonian should save to and load from restart file"""
-        H = np.array([[4.0, 1.0], [1.0, 3.0]])
+        hamiltonian = np.array([[4.0, 1.0], [1.0, 3.0]])
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, "restart.npz")
             # First call: computes and saves
-            eigenval1, eigenvec1 = Hamiltonian.diagonalize_hamiltonian(H, restart_path=path)
+            eigenval1, eigenvec1 = Hamiltonian.diagonalize_hamiltonian(hamiltonian, restart_path=path)
             self.assertTrue(os.path.exists(path))
             # Second call: loads from file
-            eigenval2, eigenvec2 = Hamiltonian.diagonalize_hamiltonian(H, restart_path=path)
+            eigenval2, eigenvec2 = Hamiltonian.diagonalize_hamiltonian(hamiltonian, restart_path=path)
             self.assertTrue(np.allclose(eigenval1, eigenval2))
             self.assertTrue(np.allclose(eigenvec1, eigenvec2))
 
     def test_restart_path_must_be_npz(self):
         """restart_path must end with .npz"""
-        H = np.eye(2)
         with self.assertRaises(ValueError):
-            Hamiltonian.diagonalize_hamiltonian(H, restart_path="/tmp/bad.txt")
+            Hamiltonian.diagonalize_hamiltonian(np.eye(2), restart_path="/tmp/bad.txt")
 
     def test_eigenvalues_are_real(self):
         """Eigenvalues of a Hermitian matrix must be real"""
         # Complex Hermitian matrix
-        H = np.array([[2.0+0j, 1.0-1j], [1.0+1j, 3.0+0j]])
-        eigenval, _ = Hamiltonian.diagonalize_hamiltonian(H)
+        hamiltonian = np.array([[2.0+0j, 1.0-1j], [1.0+1j, 3.0+0j]])
+        eigenval, _ = Hamiltonian.diagonalize_hamiltonian(hamiltonian)
         self.assertTrue(np.all(np.isreal(eigenval)))
         self.assertGreater(eigenval[0], 0.0)
 

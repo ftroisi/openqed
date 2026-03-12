@@ -67,7 +67,7 @@ class TestLinearResponse(BaseOpenqedTest):
         self.assertTrue(np.allclose(response, expected, atol=1e-12))
 
     def test_linear_response_from_states_file(self):
-        """States should be loadable from a restart file in __init__."""
+        """States should be loadable from a restart file in __init__"""
         with tempfile.TemporaryDirectory() as tmpdir:
             states_path = os.path.join(tmpdir, "states.npz")
             np.savez(
@@ -128,8 +128,8 @@ class TestLinearResponse(BaseOpenqedTest):
 
         System:
             E_0 = 0,  E_1 = 1.5,  E_2 = 3.0  (Hartree)
-            |<0|P_x|1>|^2 = 1.0  →  peak height at omega=1.5 ≈ 1/eta = 20
-            |<0|P_x|2>|^2 = 0.25 →  peak height at omega=3.0 ≈ 0.25/eta = 5
+            |<0|P_x|1>|^2 = 1.0  ->  peak height at omega=1.5 ~ 1/eta = 20
+            |<0|P_x|2>|^2 = 0.25 ->  peak height at omega=3.0 ~ 0.25/eta = 5
         """
         eta = 0.05
         eigenvalues = np.array([0.0, 1.5, 3.0], dtype=np.float64)

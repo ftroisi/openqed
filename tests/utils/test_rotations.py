@@ -1,4 +1,4 @@
-# Copyright 2025 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,48 +26,48 @@ class TestRotationMatrix(BaseOpenqedTest):
 
     def test_identity_rotation(self):
         """A 0-degree rotation must be the identity matrix"""
-        R = get_2d_rotation_matrix(np.float64(0.0))
-        self.assertEqual(R.shape, (2, 2))
-        self.assertTrue(np.allclose(R, np.eye(2)))
+        rotation = get_2d_rotation_matrix(np.float64(0.0))
+        self.assertEqual(rotation.shape, (2, 2))
+        self.assertTrue(np.allclose(rotation, np.eye(2)))
 
     def test_90_degree_rotation(self):
         """A 90-degree rotation matrix must satisfy R @ [1, 0] = [0, 1]"""
-        R = get_2d_rotation_matrix(np.float64(90.0))
-        rotated = R @ np.array([1.0, 0.0])
+        rotation = get_2d_rotation_matrix(np.float64(90.0))
+        rotated = rotation @ np.array([1.0, 0.0])
         self.assertTrue(np.allclose(rotated, [0.0, 1.0], atol=1e-14))
 
     def test_180_degree_rotation(self):
         """A 180-degree rotation must negate the vector"""
-        R = get_2d_rotation_matrix(np.float64(180.0))
-        rotated = R @ np.array([1.0, 0.0])
+        rotation = get_2d_rotation_matrix(np.float64(180.0))
+        rotated = rotation @ np.array([1.0, 0.0])
         self.assertTrue(np.allclose(rotated, [-1.0, 0.0], atol=1e-14))
 
     def test_360_degree_rotation(self):
         """A 360-degree rotation must return to identity"""
-        R = get_2d_rotation_matrix(np.float64(360.0))
-        self.assertTrue(np.allclose(R, np.eye(2), atol=1e-14))
+        rotation = get_2d_rotation_matrix(np.float64(360.0))
+        self.assertTrue(np.allclose(rotation, np.eye(2), atol=1e-14))
 
     def test_rotation_matrix_is_orthogonal(self):
         """R^T R must be the identity and det(R) must be 1 (proper rotation)"""
         for angle in [0.0, 30.0, 45.0, 60.0, 90.0, 123.456]:
-            R = get_2d_rotation_matrix(np.float64(angle))
-            self.assertTrue(np.allclose(R.T @ R, np.eye(2), atol=1e-14))
-            self.assertTrue(np.isclose(np.linalg.det(R), 1.0, atol=1e-14))
+            rotation = get_2d_rotation_matrix(np.float64(angle))
+            self.assertTrue(np.allclose(rotation.T @ rotation, np.eye(2), atol=1e-14))
+            self.assertTrue(np.isclose(np.linalg.det(rotation), 1.0, atol=1e-14))
 
     def test_rotation_preserves_norm(self):
         """Rotation must preserve the vector norm"""
-        R = get_2d_rotation_matrix(np.float64(47.0))
+        rotation = get_2d_rotation_matrix(np.float64(47.0))
         v = np.array([3.0, 4.0])
-        rotated = R @ v
+        rotated = rotation @ v
         self.assertTrue(np.isclose(np.linalg.norm(rotated), np.linalg.norm(v)))
 
     def test_inverse_rotation(self):
         """Rotating by theta then by -theta must restore the original vector"""
         theta = np.float64(37.5)
-        R = get_2d_rotation_matrix(theta)
-        R_inv = get_2d_rotation_matrix(-theta)
+        rotation = get_2d_rotation_matrix(theta)
+        inverse_rotation = get_2d_rotation_matrix(-theta)
         v = np.array([2.5, -1.3])
-        self.assertTrue(np.allclose(R_inv @ R @ v, v, atol=1e-14))
+        self.assertTrue(np.allclose(inverse_rotation @ rotation @ v, v, atol=1e-14))
 
 
 class TestRotateVector(BaseOpenqedTest):

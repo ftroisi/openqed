@@ -14,7 +14,6 @@
 
 """ Test class for the k space grid """
 
-import unittest
 import numpy as np
 from ase.units import Bohr
 
@@ -74,7 +73,7 @@ class TestKSpaceGrid(BaseOpenqedTest):
                 spacing={'x': np.float64(0.001), 'y': np.float64(0.001)}
             )
 
-    # 3. Test the flat_grid method
+    # 3. Test the flat_grid method
 
     def test_flat_1d_grid(self):
         """ Test the flat_grid method for the 1D grid """
@@ -88,14 +87,14 @@ class TestKSpaceGrid(BaseOpenqedTest):
         self.assertIsInstance(self.grid_1d._flat_grid, np.ndarray)
         #pylint: enable=protected-access
 
-        # Check the shape of the flat grid
+        # Check the shape of the flat grid
         self.assertEqual(flat_grid.shape, (21, 1))
         self.assertTrue(np.isclose(np.max(flat_grid, axis=0), 0.02)) # Grid includes endpoint
 
     def test_flat_2d_grid(self):
         """ Test the flat_grid method for the 2D grid """
         flat_grid = self.grid_2d.flat_grid(cache_result=True)
-        # Check the shape of the flat grid
+        # Check the shape of the flat grid
         self.assertEqual(flat_grid.shape, (1681, 2))
         # Check the maximum values of the flat grid
         self.assertTrue(
@@ -139,9 +138,9 @@ class TestKSpaceGrid(BaseOpenqedTest):
         # Find one point in the grid
         point = np.array([0.01, 0.015])
         index_before_proj = self.grid_2d.get_point_index(point)
-        # Check that the projection method does not raise any error
+        # Check that the projection method does not raise any error
         self.grid_2d.project_to_unit_cell(self.hexagonal_unit_cell)
-        # Check that the point was projected to the unit cell only in the new grid
+        # Check that the point was projected to the unit cell only in the new grid
         index_after_proj = self.grid_2d.get_point_index(point)
         self.assertEqual(index_after_proj, index_before_proj)
         # Now cache the projected grid
@@ -152,7 +151,6 @@ class TestKSpaceGrid(BaseOpenqedTest):
         projected_point = np.array([0.01001481, 0.01156411])
         index_after_proj = self.grid_2d.get_point_index(projected_point)
         self.assertEqual(index_after_proj, index_before_proj)
-
 
     # 6. Test the dimensions property
 

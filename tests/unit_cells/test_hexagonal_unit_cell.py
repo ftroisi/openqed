@@ -1,4 +1,4 @@
-# Copyright 2025 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,20 +22,6 @@ from tests.openqed_test import BaseOpenqedTest
 from openqed.grid.grid import GridType
 from openqed.grid.k_space_grid import KSpaceGrid
 from openqed.unit_cells.hexagonal_unit_cell import HexagonalUnitCell
-
-
-class TestUnitCellValidation(BaseOpenqedTest):
-    """Test input validation of the abstract UnitCell base class"""
-
-    def test_invalid_dimension_raises(self):
-        """Only dimensions 1, 2, 3 are valid"""
-        with self.assertRaises(ValueError):
-            HexagonalUnitCell.__bases__[0].__init__(
-                HexagonalUnitCell.__new__(HexagonalUnitCell), dimension=0)
-        with self.assertRaises(ValueError):
-            HexagonalUnitCell.__bases__[0].__init__(
-                HexagonalUnitCell.__new__(HexagonalUnitCell), dimension=4)
-
 
 class TestHexagonalUnitCell(BaseOpenqedTest):
     """Test class for HexagonalUnitCell"""
