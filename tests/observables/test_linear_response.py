@@ -67,7 +67,7 @@ class TestLinearResponse(BaseOpenqedTest):
         self.assertTrue(np.allclose(response, expected, atol=1e-12))
 
     def test_linear_response_from_states_file(self):
-        """States should be loadable from a restart file in __init__."""
+        """States should be loadable from a restart file in __init__"""
         with tempfile.TemporaryDirectory() as tmpdir:
             states_path = os.path.join(tmpdir, "states.npz")
             np.savez(
@@ -128,8 +128,8 @@ class TestLinearResponse(BaseOpenqedTest):
 
         System:
             E_0 = 0,  E_1 = 1.5,  E_2 = 3.0  (Hartree)
-            |<0|P_x|1>|^2 = 1.0  →  peak height at omega=1.5 ≈ 1/eta = 20
-            |<0|P_x|2>|^2 = 0.25 →  peak height at omega=3.0 ≈ 0.25/eta = 5
+            |<0|P_x|1>|^2 = 1.0  ->  peak height at omega=1.5 ~ 1/eta = 20
+            |<0|P_x|2>|^2 = 0.25 ->  peak height at omega=3.0 ~ 0.25/eta = 5
         """
         eta = 0.05
         eigenvalues = np.array([0.0, 1.5, 3.0], dtype=np.float64)
@@ -183,6 +183,58 @@ class TestLinearResponse(BaseOpenqedTest):
         # The peak with the larger matrix element must be taller.
         self.assertGreater(peak1_val, peak2_val,
                            msg="Peak at 1.5 (larger matrix element) should dominate")
+
+    def test_response_is_real(self):
+        """The linear response (imaginary part of susceptibility) must be real-valued"""
+        linear_response = LinearResponse(
+            omega_probe=self.w_probe,
+            eta=self.eta,
+            probe_polarization=LightPolarization.LINEAR_X,
+            probe_operator=self.probe_operator,
+            eigenvalues=self.eigenvalues,
+            eigenvectors=self.eigenvectors
+        )
+        response = linear_response.compute()
+        self.assertTrue(np.all(np.isreal(response)))
+
+    def test_negative_eta_raises(self):
+        """Negative broadening eta must raise ValueError"""
+        with self.assertRaises(ValueError):
+            LinearResponse(
+                omega_probe=self.w_probe,
+                eta=-0.1,
+                probe_polarization=LightPolarization.LINEAR_X,
+                probe_operator=self.probe_operator,
+                eigenvalues=self.eigenvalues,
+                eigenvectors=self.eigenvectors
+            )
+
+    def test_save_bad_extension_raises(self):
+        """Saving to a non-.npz file must raise ValueError"""
+        linear_response = LinearResponse(
+            omega_probe=self.w_probe,
+            eta=self.eta,
+            probe_polarization=LightPolarization.LINEAR_X,
+            probe_operator=self.probe_operator,
+            eigenvalues=self.eigenvalues,
+            eigenvectors=self.eigenvectors
+        )
+        response = linear_response.compute()
+        with self.assertRaises(ValueError):
+            linear_response.save(filename="output.txt", data=response)
+
+    def test_load_states_missing_file_raises(self):
+        """Loading states from a non-existent file must raise FileNotFoundError"""
+        from openqed.observables.observable import Observable
+        with self.assertRaises(FileNotFoundError):
+            Observable._load_states("/tmp/nonexistent_states_file.npz")
+
+    def test_load_states_bad_extension_raises(self):
+        """Loading states from a non-.npz file must raise ValueError"""
+        with tempfile.NamedTemporaryFile(suffix=".txt") as f:
+            from openqed.observables.observable import Observable
+            with self.assertRaises(ValueError):
+                Observable._load_states(f.name)
 
 
 if __name__ == "__main__":

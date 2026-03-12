@@ -1,4 +1,4 @@
-# Copyright 2025 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ from tests.hamiltonians.dummy_hamiltonian import DummyHamiltonian
 from openqed.grid.k_space_grid import KSpaceGrid
 from openqed.hamiltonians.terms.kinetic_term import KineticTerm
 from openqed.hamiltonians.types import BilayerStructure
+from openqed.unit_cells.hexagonal_unit_cell import HexagonalUnitCell
 
 class TestKineticTerm(BaseOpenqedTest):
     """Test class for the KineticTerm class"""
@@ -36,23 +37,23 @@ class TestKineticTerm(BaseOpenqedTest):
             'y': (np.float64(-0.02), np.float64(0.02))
         }
         lattice_params: BilayerStructure = {
-            'layer1': np.float64(3.32) / Bohr,
-            'layer2': np.float64(3.319) / Bohr
+            'layer1': np.float64(3.32 / Bohr),
+            'layer2': np.float64(3.319 / Bohr)
         }
         k_space_grid = KSpaceGrid(spacing=spacing, boundaries=boundaries)
-        k_space_grid.project_to_unit_cell(
-            real_space_lattice_parameter=np.float64(lattice_params["layer1"]), cache_result=True)
-        # Init a dummy Hamiltonian
+        unit_cell = HexagonalUnitCell(np.float64(lattice_params["layer1"]))
+        k_space_grid.project_to_unit_cell(unit_cell, cache_result=True)
+        # Init a dummy Hamiltonian
         self.hamiltonian = DummyHamiltonian(terms=['free_exciton'], grid=k_space_grid)
         # Set the effective masses
         self.electron_effective_mass: BilayerStructure = { 'layer1': np.float64(0.5) }
         self.hole_effective_mass: BilayerStructure = { 'layer1': np.float64(0.6) }
         self.eff_mass = \
             (1/self.electron_effective_mass['layer1'] + 1/self.hole_effective_mass['layer1'])**(-1)
-        # Create the FreeExciton class
+        # Create the FreeExciton class
         self.free_exciton_term = KineticTerm(self.hamiltonian, mass=np.float64(self.eff_mass))
 
-    # 1. Test the Hamiltonian term is correctly generated
+    # 1. Test the Hamiltonian term is correctly generated
 
     def test_get_hamiltonian_term(self):
         """Test the get_hamiltonian_term method"""
@@ -62,7 +63,7 @@ class TestKineticTerm(BaseOpenqedTest):
         # Check that the minimum value is 0
         self.assertTrue(np.isclose(np.min(hamiltonian_term), 0.0))
 
-    # 2. Check that the Hamiltonian term is diagonal
+    # 2. Check that the Hamiltonian term is diagonal
 
     def test_diagonalize_hamiltonian(self):
         """Test the get_hamiltonian_term method"""
@@ -73,6 +74,33 @@ class TestKineticTerm(BaseOpenqedTest):
         self.assertTrue(np.isclose(np.min(hamiltonian_term), eigenval[0]))
         # Check that the maximum value is the maximum of the grid
         self.assertTrue(np.isclose(np.max(hamiltonian_term), eigenval[-1]))
+
+    def test_kinetic_energy_all_non_negative(self):
+        """Kinetic energy T = k^2 / (2m) must be >= 0 for all k-points"""
+        hamiltonian_term = self.free_exciton_term.get_hamiltonian_term()
+        self.assertTrue(np.all(hamiltonian_term >= -1e-15))
+
+    def test_kinetic_energy_is_real(self):
+        """Kinetic energy must be purely real"""
+        hamiltonian_term = self.free_exciton_term.get_hamiltonian_term()
+        self.assertTrue(np.all(np.isreal(hamiltonian_term)))
+
+    def test_kinetic_energy_zero_at_gamma(self):
+        """The kinetic energy at the Gamma point (k=0) must be exactly zero"""
+        hamiltonian_term = self.free_exciton_term.get_hamiltonian_term()
+        grid = self.free_exciton_term.hamiltonian.grid.flat_grid()
+        # Find the k-point closest to Gamma (origin)
+        k_norms = np.linalg.norm(grid, axis=1)
+        gamma_idx = np.argmin(k_norms)
+        self.assertTrue(np.isclose(hamiltonian_term[gamma_idx], 0.0, atol=1e-12))
+
+    def test_kinetic_energy_scales_with_mass(self):
+        """Halving the effective mass should double the kinetic energy"""
+        original_kinetic_energy = self.free_exciton_term.get_hamiltonian_term()
+        light_term = KineticTerm(self.hamiltonian, mass=np.float64(self.eff_mass / 2))
+        light_kinetic_energy = light_term.get_hamiltonian_term()
+        # T = k^2/(2m), so halving m doubles T
+        self.assertTrue(np.allclose(light_kinetic_energy, 2.0 * original_kinetic_energy, atol=1e-12))
 
 if __name__ == "__main__":
     unittest.main()

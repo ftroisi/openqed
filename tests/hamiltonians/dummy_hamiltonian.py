@@ -1,4 +1,4 @@
-# Copyright 2025 Francesco Troisi
+# Copyright 2026 Francesco Troisi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,41 +16,20 @@
 
 import numpy as np
 import numpy.typing as npt
-import scipy.sparse.linalg as ssl
 
-from openqed.hamiltonians.hamiltonian import Hamiltonian
+from openqed.hamiltonians.matter_hamiltonian import MatterHamiltonian
 
-class DummyHamiltonian(Hamiltonian):
+class DummyHamiltonian(MatterHamiltonian):
     """Dummy Hamiltonian class"""
     def __init__(self, terms: list[str], *, grid) -> None:
-        super().__init__("Mott-Wannier", terms, grid=grid)
+        super().__init__("Mott-Wannier", terms, mode="many_body", grid=grid)
 
-    def get_hamiltonian(self, **kwargs):
-        pass
+    def get_hamiltonian_size(self) -> int:
+        return np.size(self.grid.flat_grid(), 0)
 
-    def diagonalize_hamiltonian(self,
-                                hamiltonian,
-                                **kwargs
-        ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-        """Diagonalize the Hamiltonian
+    def _get_many_body_hamiltonian(self):
+        n = self.get_hamiltonian_size()
+        return np.zeros((n, n), dtype=np.float64)
 
-        Args:
-            hamiltonian: A NxN numpy array representing hermitian matrix to diagonalize
-            num_eigenvalues: The number of eigenvalues and eigenvectors to find.
-                Defaults to None, meaning that all eigenvalues will be found (exact diagonalization)
-
-        Returns:
-            A tuple containing the eigenvalues and eigenvectors of the Hamiltonian
-        """
-        num_eigenvalues: int = kwargs.get('num_eigenvalues', None)
-        if num_eigenvalues is None:
-            eigenval, eigenvec = np.linalg.eigh(hamiltonian)
-        else:
-            eigenval, eigenvec = ssl.eigsh(
-                hamiltonian,
-                k=num_eigenvalues,
-                which="SM",
-                tol=1e-7, # type: ignore
-                return_eigenvectors=True
-            )
-        return eigenval, eigenvec
+    def get_interaction_hamiltonian(self, light_momentum, light_polarization):
+        raise NotImplementedError()
